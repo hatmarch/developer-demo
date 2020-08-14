@@ -1,0 +1,76 @@
+= Developer Demo: Setup =
+:experimental:
+:imagesdir: images
+:toc:
+:toclevels: 4
+
+== Installing Demo ==
+[IMPORTANT]
+====
+* Before running any script commands, make sure the run the following in the appropriate shell
++
+----
+. scripts/shell-setup.sh
+----
+====
+
+=== Setup Prerequisites ===
+
+. Setup your environment or shell variables as outlined <<Variables Used in This Demo,here>>
+. Run the following script to install the necessary operators to your cluster
++
+----
+$DEMO_HOME/scripts/install-prereq.sh
+----
+
+=== Main Demo Installation ===
+
+The demo installation will setup all the necessary aspects of the demo which includes:
+
+* Gogs repo
+* Tekton Pipeline
+* Coolstore Elements (no Payment)
+* Optional: Kafka
+
+. Install the main part of the demo by running this command
++
+----
+$DEMO_HOME/scripts/create-demo.sh -p $PROJECT_PREFIX 
+----
+
+== Appendix ==
+
+=== Variables Used in This Demo ===
+
+Here are all the variables that are used for the different commands in this demo
+
+* PROJECT_PREFIX: This is the base name for the projects that will be created (e.g. ${PROJECT_PREFIX}-cicd)
+
+==== Monitoring Kafka Cluster Installation ====
+
+You can tail the logs of the amqstreams operator's logs to determine why an installation is taking so long:
+
+----
+stern -l "name=amq-streams-cluster-operator" -n openshift-operators
+----
+
+NOTE: stern is installed in the .devcontainer that is in the root of this repo.  If you open the repository folder in a container (using vscode remote) stern is installed on the container.
+
+=== Missing Operator Catalogs ===
+
+If you cannot find the operators referenced then run the following on your cluster
+
+----
+oc apply -f "$DEMO_HOME/install/redhat-operators-csc.yaml" \
+  -f "$DEMO_HOME/install/community-operators-csc.yaml"
+
+oc -n openshift-marketplace get csc
+----
+
+A successful reconciliation should show an output like:
+
+----
+NAME                           STATUS      MESSAGE                                       AGE
+community-operators-packages   Succeeded   The object has been successfully reconciled   62s
+redhat-operators-packages      Succeeded   The object has been successfully reconciled   62s
+----
