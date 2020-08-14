@@ -1,0 +1,12 @@
+
+.DS_Store
+
+target/
+.classpath
+.project
+.settings/
+.settings/
+coolstore-ui/tmp
+
+.vscode
+docker-secrets/
