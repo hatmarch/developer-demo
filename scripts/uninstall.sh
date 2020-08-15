@@ -113,6 +113,10 @@ main() {
 
     echo "Uninstalling support project $KAFKA_PROJECT"
     oc delete project "${KAFKA_PROJECT}" || true
+
+    cicd_prj="${PROJECT_PREFIX}-cicd"
+    echo "Uninstalling cicd project ${cicd_prj}"
+    oc delete prject "${cicd_prj}" || true
 }
 
 main "$@"
