@@ -58,7 +58,23 @@ main() {
 
     get_and_validate_options "$@"
 
-    #create the project if it doesn't already exist
+    #
+    # create the cicd project
+    #
+    cicd_prj="${PROJECT_PREFIX}-cicd"
+    oc get ns $cicd_prj 2>/dev/null  || { 
+        oc new-project $cicd_prj
+    }
+
+    # Create the gogs server
+    oc apply -f $DEMO_HOME/install/gogs/gogs.yaml -n $cicd_prj
+    GOGS_HOSTNAME=$(oc get route gogs -o template --template='{{.spec.host}}' -n $cicd_prj)
+    echo "Initiatlizing git repository in Gogs and configuring webhooks"
+    sed "s/@HOSTNAME/$GOGS_HOSTNAME/g" $DEMO_HOME/install/gogs/gogs-configmap.yaml | oc create -f - -n $cicd_prj
+    oc rollout status deployment/gogs -n $cicd_prj
+    oc create -f $DEMO_HOME/install/gogs/gogs-init-taskrun.yaml -n $cicd_prj
+
+    #create the dev project if it doesn't already exist
     dev_prj="${PROJECT_PREFIX}-dev"
     oc get ns $dev_prj 2>/dev/null  || { 
         oc new-project $dev_prj
