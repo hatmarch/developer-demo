@@ -25,9 +25,9 @@ spec:
       type: string
       description: Where the code is relative to the start of the GIT_REPO
       default: "."
-    - name: IMAGE_URL
-      type: string
-      description: The URL or the repository that the image will be saved out to
+    # - name: IMAGE_URL
+    #   type: string
+    #   description: The URL or the repository that the image will be saved out to
   resources:
   - name: app-image
     type: image
@@ -57,13 +57,14 @@ spec:
       value: "false"
   - name: build-image
     taskRef:
-#      type: clusterTask
+      kind: ClusterTask
       name: jib-maven
     runAfter:
       - checkout
     params:
     - name: DIRECTORY
-      value: payment-service
+      value: source
+#      value: source/payment-service
     # - name: CACHE
     #   value: #directory in wrokspace volume
     - name: INSECUREREGISTRY
@@ -77,10 +78,12 @@ spec:
       workspace: local-workspace
   - name: deploy-service
     taskRef:
-      # type: clusterTask
+      kind: ClusterTask
       name: kn
+    runAfter:
+      - build-image
     params:
-    - name: args
+    - name: ARGS
       value:
       - service
       - update

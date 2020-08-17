@@ -9,21 +9,18 @@ spec:
   # uncomment these parameters if you want to point to the internal git repo, pointing external might
   # make iteration easier
   - name: GIT_REPO
-    value: "http://gogs:3000/gogs/coolstore.git"
+  #  value: "http://gogs:3000/gogs/coolstore.git"
+    value: "http://gogs:3000/gogs/eventinghello.git"
     # value: "https://github.com/hatmarch/fraud_detection_support.git"
   - name: PATH_CONTEXT
-    value: "payment-service"
-  - name: NOTEBOOK_NAME
-    value: "frauddetection.ipynb"
-  - name: IMAGE_URL
-    value: image-registry.openshift-image-registry.svc:5000/dev-demo-cicd/payment
+    value: ""
   resources:
   - name: app-image
     resourceSpec:
       type: image
       params:
       - name: url
-        value: $(params.IMAGE_URL)
+        value: image-registry.openshift-image-registry.svc:5000/dev-demo-dev/payment
   workspaces:
   - name: local-workspace
     persistentVolumeClaim:
