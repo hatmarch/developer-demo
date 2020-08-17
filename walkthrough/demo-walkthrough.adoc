@@ -1,0 +1,271 @@
+= Developer Demo 
+:experimental:
+:imagesdir: ../images
+:toc:
+:toclevels: 4
+
+[IMPORTANT]
+.On necessary operators
+====
+See link:../README.adoc[] for information on operators and other prerequisites that must be installed for the demo to run properly.
+====
+
+This demo centers around the creation of a serverless payment service that supports the "Coolstore" website the relevant architecture of which can be seen here:
+
+image:coolstore-arch.png[]
+
+== Optional: Show Operator UI ==
+
+Tie this back to ACM and how it manages what operators are installed on the cluster, such as those that are key to the demonstration.  This include:
+
+* Serverless Operator
+* Pipelines Operator
+* Kafka Operator
+* Kafka Event Source
+
+== Coolstore Introduction
+
+. Start with `$PROJECT_PREFIX`-dev project, which should have the Red Hat Coolstore setup minus the payment service
+. Launch the coolstore from the badge on the coolstore service on the dev perspective
+** Can use this to contextualize with the above diagram (or from these slides link:https://docs.google.com/presentation/d/1XtvEx9cMRqrlMcY_EdiIsBR78WJawoSfXvFiyt66pS4/edit#slide=id.g72cacdd2b4_0_120[here])
+
+== Create Payment Service ==
+
+. Create Service: Developer Perspective: Add knative payment service
+.. Click Add, select image
+.. Image is: quay.io/mhildenb/homemade-serverless-native:1.1
+.. Select knative service
+.. Name the service `payment`
+.. Customize Scaling
+*** Target and Max concurrency to 1
+.. Customize Deployment
+*** Env: `mp.messaging.outgoing.payments.bootstrap.servers=my-cluster-kafka-bootstrap.dev-demo-support:9092`
+*** Label: app.kubernetes.io/part-of=focus
+. Go back to the Coolstore site and buy something
+. Go to the orders screen and show that the order is not processed
+
+== Create Event Source ==
+
+. First open a shell watch window to run the following command to see ORDERS coming in
++
+oc exec -c kafka my-cluster-kafka-0 -n dev-demo-support -- /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders
++
+. Show PAYMENTS with this command in another shell
++
+----
+oc exec -c kafka my-cluster-kafka-0 -n dev-demo-support -- /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic payments
+----
++
+. Notice that the second the order is placed, the payment service spins up again
+. From the payment service on the topology view, pull out blue arrow
+. Select `Event Source` from end of arrow
+. Fill in the following Kafka SOURCE:
++
+image:kafka-source.png[]
++
+. Show the service starting up from the topology view
+. Refresh the order details page on coolstore.  Order should now be processed
+
+== Scaling Support ==
+
+=== Using `hey` ===
+
+. Let's innundate the payment service with calls to see how it responds to the concurrency targets we set
+. Make sure windows are setup with Topology View prominent and two shells:
++
+image:scaling-desktop-setup.png[]
++
+. Run this command to simulate orders coming in from coolstore
++
+----
+hey -n 100 -c 100 -m POST -D $DEMO_HOME/example/order-payload.json -T "application/json" $(oc get rt payment -n dev-demo-dev -o jsonpath='{.status.url}')
+----
++
+. Notice that close to 100 pods spin up
+. Review `hey` report
++
+image:hey-report.png
+
+=== Using `kafka-spammer` ===
+
+TODO
+
+== Create Tekton Pipeline ==
+
+The installation script creates a payment pipeline.  Might use pipeline builder to refine this pipeline
+** Currently some tasks take in a lot of parameters; might be better to wrap clustertasks for easy setup 
+
+Setup a trigger to the gogs repo (for payment editing)
+
+== Edit payment service ==
+
+[NOTE]
+====
+This is untested.  Not sure if CRW badge works with knative services
+====
+
+. Click CRW badge on payment service
+. Checkout from local gogs repo
+
+. If CRW can't be made to work, or there isn't enough time, can just edit the file from gogs (`PaymentResource`) to change the text that is logged when "payment is processed" and then checkin to trigger the tekton pipeline
+. Pipeline will update the revision
+. Reorder something from coolstore and see the new message
+
+
+== Troubleshooting ==
+
+=== 500 errors
+
+You may notice 500 errors, particularly if you send multiple requests under load:
+
+image:500-errors.png[]
+
+I believe this is because there is currently a race condition when the second request hits a pod where the payment topic (`producer` in the code) is not fully setup in the payment service (thus a null pointer).  Looks like the first exception happens in the `pass` function but this is caught in the handleCloudEvent function, only for the `fail` event to use the `producer` null pointer to try to log a failure at which time a new uncaught exception is raised.
+
+If you set the concurrently limit to 1, you should be able to demonstration that this error doesn't happen with hey
+
+=== Getting logs of Knative service
+
+The epheral nature of the knative service can make it hard to capture logs of the service, particularly if you notice that the service had issues after it's gone.
+
+Aside from setting up Elasticsearch to retain all logs, you can consider using `stern` in the background.  Using the .devcontainer that is run from within VSCode, you can have the following command running in a background terminal:
+
+----
+stern -l serving.knative.dev/service=payment
+----
+
+To see all the logs from revision 1 of the payment service (-1 represents the revision number I believe).  This command will include logs from all containers associated with the pod (such as `queue-proxy`).  If you only want the deployed code itself to log, add the `-c user-container` flag
+
+=== Viewing and Modifying Order (MongoDB) Database
+
+You cannot connect to the mongodb instance using the latest plain adminer container.  Instead you need to follow the special instructions below.  If you my version of adminer does not work for you, you can attempt to follow <<Updating your own Adminer image,these instructions>> for creating a new image yourself from the latest.
+
+. Start port forwarding to the mongodb service
++
+----
+oc port-forward -n coolstore svc/order-database 27017:27017
+----
++
+. Run the modified adminer pod
+** NOTE: `quay.io/mhildenb/myadminer:1.1` is a version 4.7.6 adminer container that I've updated to support this
++
+----
+docker run -p 8080:8080 -e ADMINER_DEFAULT_SERVER=docker.for.mac.localhost quay.io/mhildenb/myadminer:1.1
+----
++
+. Login as shown
++
+image:adminer-mongo-password.png[]
++
+. You should now have access to the mongo database with the ability to list and edit entries:
++
+image:adminer-mongo-edit.png[]
+
+==== Updating your own Adminer image
+
+There are two reasons why the normal adminer image cannot connect to the mongo database:
+
+1. It requires a newer version of php integration with MongoDB
+2. The mongoDB is not setup with a user and a password (Adminer does not allow access to such databases by default for security reasons)
+
+To update the latest adminer image to be able to connect to the userless MongoDB follow these instructions:
+
+. Run an instance of the adminer container as follows:
++
+----
+docker run -it -u root --name my_adminer adminer:latest sh 
+----
+** NOTE: If an instance of the container is already running you can use the `docker exec -it` command instead
++
+. Then from inside the container run
++
+----
+apk add autoconf gcc g++ make libffi-dev openssl-dev
+pecl install mongodb
+echo "extension=mongodb.so" > /usr/local/etc/php/conf.d/docker-php-ext-mongodb.ini
+----
++
+. Next add a plugin as per link:https://nerdpress.org/2019/10/23/adminer-for-sqlite-in-docker/[This site].  It will require you to create a login-password-less.php file in the `/var/www/html/plugins-enabled/` directory
++
+[CONTENTS]
+====
+----
+<?php
+require_once('plugins/login-password-less.php');
+
+/** Set allowed password
+ * @param string result of password_hash
+ */
+return new AdminerLoginPasswordLess(
+    $password_hash = password_hash("admin", PASSWORD_DEFAULT)
+);
+----
+====
++
+. now commit this container as a new image
++
+----
+docker commit my_adminer myadminer:1.1    
+----
+
+=== Insecure ImageRegistry ===
+
+Might be solved as per link:https://github.com/knative/serving/issues/2136[here] but can't get the controller pod to take the new environment variable
+
+Looks like it has something to do with the labels.  If the sha is used instead it seems to work properly.  You can find the sha like this:
+----
+$ oc get istag/payment:latest -o jsonpath='{.image.dockerImageReference}'
+image-registry.openshift-image-registry.svc:5000/user1-cloudnativeapps/payment@sha256:21ca1acc3f292b6e94fab82fe7a9cf7ff743e4a8c9459f711ffad125379cf3c7
+----
+
+And then apply it as a service like this:
+----
+kn service create payment --image $(oc get istag/payment:initial-build -o jsonpath='{.image.dockerImageReference}') --label "app.kubernetes.io/part-of=focus" --revision-name "{{.Service}}-{{.Generation}}" --annotation sidecar.istio.io/inject=false --force
+----
+
+----
+oc port-forward <image-registry-pod> -n openshift-image-registry 5001:5000
+----
+
+To get the cert as a pem file, do this:
+----
+openssl s_client -showcerts -connect localhost:5001 </dev/null 2>/dev/null|openssl x509 -outform PEM >mycertfile.pem
+----
+
+== Appendix
+
+=== Copying OpenShift images to public repositories
+
+If you have images that you've compiled on an OpenShift cluster and you want to pull them out of the local image stream to something like `quay.io`, you can use one of the following approaches to copy the images out of openshift.  Both use the `skopeo` command which is installed by default in the .devcontainer.  
+
+For both examples, it assumes the copying of a payment service.  As such, note the following for the different variables:
+
+* USER: your username for the public repository
+* PASSWORD: your password or TOKEN for the public repository
+* PROJECT: the project your image stream lives in (such as coolstore)
+* IMAGE_DEST: Replace this with your repository, project, image-name, and version, example: `quay.io/mhildenb/homemade-serverless-java:1.0`: 
+
+==== Image Registry is exposed publicly 
+
+You need only run the following command:
+
+----
+skopeo copy --src-creds "$(oc whoami):$(oc whoami -t)" --dest-creds "${USER}:${PASSWORD}" docker://$(oc get is payment -o jsonpath='{.status.publicDockerImageRepository}'):latest docker://{IMAGE_DEST}       
+----
+
+==== Image Registry is private
+
+If instead you need to copy from an image registry that is not exposed outside the cluster, you must instead do the following:
+
+. Port forward to openshift's internal image registry
++
+----
+oc port-forward svc/image-registry -n openshift-image-registry 5000:5000
+----
++
+. Then in a separate shell, run the following command
++
+----
+skopeo copy --src-creds "$(oc whoami):$(oc whoami -t)" --src-tls-verify=false --dest-creds "${USER}:${PASSWORD}" docker://localhost:5000/${PROJECT}/payment:latest docker://{IMAGE_DEST}
+----
+
