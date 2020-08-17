@@ -1,0 +1,97 @@
+# WARNING: DO NOT kubectl apply -f this file directly.  It first needs variable substitution like so:
+# sed "s/demo-dev/$dev_prj/g" $DEMO_HOME/kube/tekton/pipelines/fraud-model-dev-pipeline.yaml | sed "s/demo-cicd/$cicd_prj/g" | oc apply -f - -n $cicd_prj
+# where dev_prj is set to point to your dev project and cicd_prj is set to point to your cicd project
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: payment-pipeline
+spec:
+  workspaces:
+  - name: local-workspace
+  params:
+    - name: GIT_REPO
+      type: string
+      description: The repo to check output
+      default: 'http://gogs:3000/gogs/coolstore.git'
+    - name: GIT_REVISION
+      type: string
+      description: The branch to be built
+      default: 'master'
+    - name: GIT_MESSAGE
+      type: string
+      description: The commit message of the triggered build (if any)
+      default: "<none>"
+    - name: PATH_CONTEXT
+      type: string
+      description: Where the code is relative to the start of the GIT_REPO
+      default: "."
+    - name: IMAGE_URL
+      type: string
+      description: The URL or the repository that the image will be saved out to
+  resources:
+  - name: app-image
+    type: image
+  tasks:
+  - name: checkout
+    taskRef:
+      name: git-clone
+    workspaces:
+    - name: workvol
+      workspace: local-workspace
+    params:
+    - name: url
+      value: $(params.GIT_REPO)
+    - name: revision
+      value: $(params.GIT_REVISION)
+    - name: message
+      value: $(params.GIT_MESSAGE)
+    # by setting subdirectory parameters to ""
+    # checkout will clone to the root of the local-workspace
+    # volume, which will allow other tasks to find this directory
+    # at their name for the mount point
+    - name: subdirectory
+      value: "source"
+    - name: deleteExisting
+      value: "true"
+    - name: submodules
+      value: "false"
+  - name: build-image
+    taskRef:
+#      type: clusterTask
+      name: jib-maven
+    runAfter:
+      - checkout
+    params:
+    - name: DIRECTORY
+      value: payment-service
+    # - name: CACHE
+    #   value: #directory in wrokspace volume
+    - name: INSECUREREGISTRY
+      value: "true"
+    resources:
+      outputs:
+      - name: image
+        resource: app-image
+    workspaces:
+    - name: source
+      workspace: local-workspace
+  - name: deploy-service
+    taskRef:
+      # type: clusterTask
+      name: kn
+    params:
+    - name: args
+      value:
+      - service
+      - update
+      - payment
+      - --image 
+      - $(resources.inage.url):latest
+      - --revision-name 
+      - "{{.Service}}-{{.Generation}}"
+      - -e 
+      - "mp.messaging.outgoing.payments.bootstrap.servers=my-cluster-kafka-bootstrap.dev-demo-support:9092"
+      - -n
+      - dev-demo-dev
+      - --concurrency-limit=0
+
