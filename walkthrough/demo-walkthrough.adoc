@@ -48,7 +48,9 @@ Tie this back to ACM and how it manages what operators are installed on the clus
 
 . First open a shell watch window to run the following command to see ORDERS coming in
 +
+----
 oc exec -c kafka my-cluster-kafka-0 -n dev-demo-support -- /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders
+----
 +
 . Show PAYMENTS with this command in another shell
 +
@@ -84,7 +86,7 @@ hey -n 100 -c 100 -m POST -D $DEMO_HOME/example/order-payload.json -T "applicati
 . Notice that close to 100 pods spin up
 . Review `hey` report
 +
-image:hey-report.png
+image:hey-report.png[]
 
 === Using `kafka-spammer` ===
 
