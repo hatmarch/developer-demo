@@ -95,6 +95,9 @@ main() {
         ${SCRIPT_DIR}/install-prereq.sh -k ${sup_prj}
     fi
  
+    echo "Install configmaps"
+    oc apply -R -n $dev_prj -f $DEMO_HOME/install/config/
+
     echo "Installing coolstore website (minus payment)"
     oc process -f $DEMO_HOME/install/templates/cool-store-no-payment-template.yaml -p PROJECT=$dev_prj | oc apply -f - -n $dev_prj
 

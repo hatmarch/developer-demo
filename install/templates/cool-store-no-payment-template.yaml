@@ -293,6 +293,12 @@ objects:
         - image: image-registry.openshift-image-registry.svc:5000/${PROJECT}/cart@sha256:3543f4b2de61e6facfc4a348d974cbb9f9b4810d935a188b6af7f4e184dd0b73
           imagePullPolicy: Always
           name: cart
+          env:
+            - name: mp.messaging.outgoing.orders.bootstrap.servers
+              valueFrom:
+                configMapKeyRef:
+                  name: coolstore-topics-cfg
+                  key: orders-topics-server
           ports:
           - containerPort: 8443
             protocol: TCP
@@ -796,6 +802,17 @@ objects:
         - image: image-registry.openshift-image-registry.svc:5000/${PROJECT}/order@sha256:8446636b7d526c2e93ae11a0c80201aebee67461543c2710fc58807f12cf9baf
           imagePullPolicy: Always
           name: order
+          env:
+            - name: mp.messaging.incoming.orders.bootstrap.servers
+              valueFrom:
+                configMapKeyRef:
+                  name: coolstore-topics-cfg
+                  key: orders-topics-server
+            - name: mp.messaging.incoming.payments.bootstrap.servers
+              valueFrom:
+                configMapKeyRef:
+                  name: coolstore-topics-cfg
+                  key: payments-topics-server
           ports:
           - containerPort: 8080
             protocol: TCP
