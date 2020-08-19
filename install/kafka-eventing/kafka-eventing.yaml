@@ -4,5 +4,5 @@ metadata:
   name: knative-eventing-kafka
   namespace: knative-eventing
 spec:
-  bootstrapServers: 'my-cluster-kafka-bootstrap.kafka:9092'
+  bootstrapServers: 'my-cluster-kafka-bootstrap.support-prj:9092'
   setAsDefaultChannelProvisioner: true

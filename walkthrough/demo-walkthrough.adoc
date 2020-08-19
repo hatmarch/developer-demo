@@ -40,6 +40,9 @@ Tie this back to ACM and how it manages what operators are installed on the clus
 *** Target and Max concurrency to 1
 .. Customize Deployment
 *** Env: `mp.messaging.outgoing.payments.bootstrap.servers=my-cluster-kafka-bootstrap.dev-demo-support:9092`
++
+image:payment-env.png[]
++
 *** Label: app.kubernetes.io/part-of=focus
 . Go back to the Coolstore site and buy something
 . Go to the orders screen and show that the order is not processed
@@ -70,13 +73,17 @@ image:kafka-source.png[]
 
 == Scaling Support ==
 
+Let's innundate the payment service with calls to see how it responds to the concurrency targets we set
+
+To best demonstrate what is happening, make sure windows are setup with Topology View prominent and two shells:
+
+image:scaling-desktop-setup.png[]
+
+
 === Using `hey` ===
 
-. Let's innundate the payment service with calls to see how it responds to the concurrency targets we set
-. Make sure windows are setup with Topology View prominent and two shells:
-+
-image:scaling-desktop-setup.png[]
-+
+Hey (or any tool that can generate http request concurrently) is the most accurate way to demonstrate scaling.  If you have 1 request per pod and you make 100 hey calls, you generally get 100 pods scaled up.  This is not generally true of the kafka queue approach due to the additional complexity of latency around posting messages to a topic and having these generate HTTP requests to the "sink" service
+
 . Run this command to simulate orders coming in from coolstore
 +
 ----
@@ -90,7 +97,40 @@ image:hey-report.png[]
 
 === Using `kafka-spammer` ===
 
-TODO
+[NOTE]
+.Alternative
+====
+You can attempt to cat lines to the order payload topic (but this might prove to be too slow) using this command
+
+----
+oc exec -i -c kafka my-cluster-kafka-0 -n dev-demo-support -- /opt/kafka/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic orders
+----
+====
+
+For the fastest services out there (such as quarkus native compilations) you are probably best off using the kafka spammer.  In a shell run the following commands to effectively download the spammer into the project and then rsh into it
+
+. Download the spammer into the proper project:
++
+----
+oc -n ${PROJECT_PREFIX}-support run kafka-spammer --image=quay.io/rhdevelopers/kafkaspammer:1.0.2 --env "mp.messaging.outgoing.mystream.topic=orders"
+----
++
+. Wait for the spammer to be ready
+. Run the following to find the pod and effectively rsh into it:
++
+----
+KAFKA_SPAMMER_POD=$(oc -n dev-demo-support get pod -l "run=kafka-spammer" -o jsonpath='{.items[0].metadata.name}')
+oc -n dev-demo-support exec -it $KAFKA_SPAMMER_POD -- /bin/sh
+----
+. Once on the pod, you can `curl` localhost using a path input that defines the number of concurrent requests you want to post to the topic.
+** NOTE: Keep requests to 10 or lower and pods should scale as expected given the concurrently limits set on the knative service.  Much more than this and other factors (speed of processing, vicissitudes of kafka and eventing) cause fewer than expected pods to spin up
++
+----
+NUM_REQUESTS=10
+# send 10 concurrent posts to the order topic
+curl localhost:8080/${NUM_REQUESTS}
+----
+
 
 == Create Tekton Pipeline ==
 

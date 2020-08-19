@@ -108,8 +108,8 @@ main()
         oc process -f "$DEMO_HOME/install/kafka/kafka-template.yaml" | oc apply -n $KAFKA_PROJECT -f -
 
         # install the necessary kafka instance and topics
-        oc apply -f "$DEMO_HOME/install/kafka/kafka-order-topic.yaml" -n $KAFKA_PROJECT
-        oc apply -f "$DEMO_HOME/install/kafka/kafka-payment-topic.yaml" -n $KAFKA_PROJECT
+        oc apply -f "$DEMO_HOME/install/kafka/kafka-orders-topic.yaml" -n $KAFKA_PROJECT
+        oc apply -f "$DEMO_HOME/install/kafka/kafka-payments-topic.yaml" -n $KAFKA_PROJECT
 
         # wait until the cluster is deployed
         echo "Waiting up to 30 minutes for kafka cluster to be ready"
@@ -139,7 +139,9 @@ main()
     echo "Waiting for the knative eventing instance to finish installing"
     oc wait --for=condition=InstallSucceeded knativeeventing/knative-eventing -n knative-eventing --timeout=6m
 
-    oc apply -f "$DEMO_HOME/install/kafka-eventing/kafka-eventing.yaml"
+    # NOTE: kafka eventing needs to be installed in same project as knative eventing (this is baked into the yaml) but it also
+    # needs to properly reference the cluster that we'll be using
+    sed "s#support-prj#${KAFKA_PROJECT}#" $DEMO_HOME/install/kafka-eventing/kafka-eventing.yaml | oc apply -f -
 
     # Ensure pipelines is installed
     wait_for_crd "crd/pipelines.tekton.dev"
