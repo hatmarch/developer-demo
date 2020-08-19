@@ -1,11 +1,11 @@
 apiVersion: kafka.strimzi.io/v1beta1
 kind: KafkaTopic
 metadata:
-  name: order
+  name: payments
   labels:
     strimzi.io/cluster: my-cluster
 spec:
-  partitions: 10
+  partitions: 100
   replicas: 3
   config:
     retention.ms: 604800000
