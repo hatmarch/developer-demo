@@ -116,7 +116,7 @@ main() {
 
     cicd_prj="${PROJECT_PREFIX}-cicd"
     echo "Uninstalling cicd project ${cicd_prj}"
-    oc delete prject "${cicd_prj}" || true
+    oc delete project "${cicd_prj}" || true
 }
 
 main "$@"
