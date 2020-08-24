@@ -13,7 +13,7 @@ USER root
 RUN dnf install -y subscription-manager
 
 # command line for this would look something like
-# docker build --progress=plain --secret id=myuser,src=docker-secrets/myuser.txt --secret id=mypass,src=docker-secrets/mypass.txt -t quay.io/mhildenb/comparison-demo-base:1.0 .
+# DOCKER_BUILDKIT=1 docker build --progress=plain --secret id=myuser,src=../docker-secrets/myuser.txt --secret id=mypass,src=../docker-secrets/mypass.txt -f Dockerfile-devcontainer-base -t quay.io/mhildenb/dev-demo-base:1.0 .
 RUN --mount=type=secret,id=myuser --mount=type=secret,id=mypass \
     subscription-manager register --username=$(cat /run/secrets/myuser) \
     --password=$(cat /run/secrets/mypass) --auto-attach
@@ -26,7 +26,14 @@ RUN dnf group install -y "Development Tools" && \
      dnf install -y zlib-devel openssl-devel ncurses-devel libffi-devel sqlite-devel.x86_64 readline-devel.x86_64 \
      bzip2-devel.x86_64
 
-# install skopeo
-RUN dnf install -y skopeo
+# install skopeo, wget, and zsh
+RUN dnf install -y skopeo wget zsh
 
 RUN subscription-manager unregister
+
+USER jboss
+
+# install and configure ohmyzsh for jboss user
+RUN wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - | zsh
+COPY .zshrc.example ~/.zshrc
+
