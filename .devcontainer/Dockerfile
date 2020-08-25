@@ -1,4 +1,4 @@
-FROM quay.io/mhildenb/serverless-demo-base:1.0
+FROM quay.io/mhildenb/dev-demo-base:1.0
 
 USER root
 

@@ -29,6 +29,9 @@ RUN dnf group install -y "Development Tools" && \
 # install skopeo, wget, and zsh
 RUN dnf install -y skopeo wget zsh
 
+# install prerequisites for the graalvm
+RUN dnf install -y gcc glibc-devel zlib-devel
+
 RUN subscription-manager unregister
 
 USER jboss
