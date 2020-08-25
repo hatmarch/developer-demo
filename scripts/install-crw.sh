@@ -95,8 +95,11 @@ done
 
 # # Import stack definition
 # echo "Getting token"
-# SSO_CHE_TOKEN=$(curl -s -d "username=admin&password=admin&grant_type=password&client_id=admin-cli" \
-#   -X POST http://keycloak-${TARGET_PROJECT}.${HOSTNAME_SUFFIX}/auth/realms/codeready/protocol/openid-connect/token | \
+# FIXME: the user and password are set in the che-identity-secret, at least initially
+# USER=admin
+# PASSWORD=secret
+# SSO_CHE_TOKEN=$(curl -s -d "username=${USER}&password=${PASSWORD}&grant_type=password&client_id=admin-cli" \
+#   -X POST https://keycloak-${TARGET_PROJECT}.${HOSTNAME_SUFFIX}/auth/realms/codeready/protocol/openid-connect/token | \
 #   jq  -r '.access_token')
 
 # echo "Installing Workspace (${SCRIPT_DIR}/inventory-workspace-maven.json) at: http://codeready-${TARGET_PROJECT}.${HOSTNAME_SUFFIX}/api/stack"
