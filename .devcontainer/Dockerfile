@@ -21,7 +21,7 @@ RUN curl "https://d1vvhvl2y92vvt.cloudfront.net/awscli-exe-linux-x86_64.zip" -o 
 
 # for htpasswd support 
 # install a more modern version of tkn
-RUN yum install -y httpd-tools \
+RUN dnf install -y httpd-tools \
     && curl -L https://github.com/tektoncd/cli/releases/download/v0.11.0/tkn_0.11.0_Linux_x86_64.tar.gz | \
     tar -xvzf - -C /usr/local/bin/ tkn && chmod 755 /usr/local/bin/tkn
 
