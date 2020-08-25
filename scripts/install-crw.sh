@@ -79,18 +79,13 @@ spec:
 EOF
 
 # get routing suffix
-TMP_PROJ="dummy"
-oc new-project $TMP_PROJ
-oc create route edge dummy --service=dummy --port=8080 -n $TMP_PROJ
-ROUTE=$(oc get route dummy -o=go-template --template='{{ .spec.host }}' -n $TMP_PROJ)
-HOSTNAME_SUFFIX=$(echo $ROUTE | sed 's/^dummy-'${TMP_PROJ}'\.//g')
-oc delete project $TMP_PROJ
+HOSTNAME_SUFFIX=$(oc whoami --show-server | sed "s#https://api.\([^:]*\):6443#apps.\1#g")
 echo "Hostname suffix is ${HOSTNAME_SUFFIX}"
 
-# Wait for che to be up by calling external URL of liveness check
-echo "Waiting for Che to come up..."
+# Wait for che to be up by calling external URL of readiness check
+echo "Waiting for Che to come up (at http://codeready-${TARGET_PROJECT}.${HOSTNAME_SUFFIX}/api/system/state/)..."
 while [ 1 ]; do
-  STAT=$(curl -s -w '%{http_code}' -o /dev/null http://codeready-${TARGET_PROJECT}.${HOSTNAME_SUFFIX}/api/system/state/)
+  STAT=$(curl -L -s -w '%{http_code}' -o /dev/null http://codeready-${TARGET_PROJECT}.${HOSTNAME_SUFFIX}/api/system/state/)
   if [ "$STAT" = 200 ] ; then
     break
   fi
