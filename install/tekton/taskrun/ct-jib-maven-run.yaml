@@ -15,6 +15,8 @@ spec:
       value: "source/payment-service"
     - name: INSECUREREGISTRY
       value: "true"
+    - name: CACHE
+      value: cache-vol
     resources:
       outputs:
       - name: image
@@ -23,3 +25,9 @@ spec:
           params:
           - name: url
             value: image-registry.openshift-image-registry.svc:5000/dev-demo-dev/payment
+    podTemplate:
+      volumes:
+      - name: cache-vol
+        persistentVolumeClaim:
+          claimName: cache-pvc
+    serviceAccountName: pipeline
