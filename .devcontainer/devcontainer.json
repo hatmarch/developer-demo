@@ -11,6 +11,8 @@
 		"-v", "${env:HOME}/.oh-my-zsh:/home/jboss/.oh-my-zsh",
 		"-v", "${env:HOME}/.helm:/home/jboss/.helm",
 		"-v", "${env:HOME}/.ssh:/home/jboss/.ssh",
+		// mount the maven cache locally
+		"-v", "${localWorkspaceFolder}/.m2/:/home/jboss/.m2",
 		// Used for AWS based clusters
 		"-e", "AWS_PROFILE=redhat",
 		"-e", "REGION=ap-southeast-2"
