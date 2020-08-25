@@ -104,6 +104,10 @@ main() {
         remove-crds "kafka.strimzi.io" || true
 
         remove-operator "openshift-pipelines-operator" || true
+
+        remove-operator "codeready-workspaces" || true
+
+        remove-crds "checlusters.org.eclipse.che" || true
     fi
 
     dev_prj="${PROJECT_PREFIX}-dev"
