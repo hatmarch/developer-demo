@@ -40,6 +40,35 @@ $DEMO_HOME/scripts/create-demo.sh -p $PROJECT_PREFIX
 
 == Appendix ==
 
+=== Using jib extensions for quarkus locally ===
+
+You can use the link:https://github.com/GoogleContainerTools/jib-extensions/tree/master/first-party/jib-quarkus-extension-maven[jib extensions for quarkus] to build and create an image to push to the local registry.  Here are the different commands that you can run.
+
+==== JVM build ====
+
+To build quarkus and move it to the local `payment` imagestream in the current project context run this command
+
+----
+mvn '-B' clean package com.google.cloud.tools:jib-maven-plugin:build -Djib.allowInsecureRegistries=true -Djib.to.image="$(oc get is/payment -o jsonpath='{.status.publicDockerImageRepository}')" -Djib.container.mainClass=bogus -Djib.container.ports="8080" -Djib.to.auth.username=$(oc whoami) -Djib.to.auth.password=$(oc whoami -t)
+----
+
+You can then update the knative service as so:
+
+----
+kn service update payment --image $(oc get is/payment -o jsonpath='{.status.dockerImageRepository}'):latest --revision-name "{{.Service}}-{{.Generation}}" --concurrency-limit=1
+----
+
+==== Native build ====
+
+NOTE: Not currently working, as outlined in link:https://github.com/GoogleContainerTools/jib-extensions/tree/master/first-party/jib-quarkus-extension-maven[jib extensions for quarkus].
+
+NOTE: If running in a docker container, need to ensure that you give enough resources to docker
+
+----
+export MAVEN_OPTS=" -Xmx1024M -Xss128M -XX:MetaspaceSize=512M -XX:MaxMetaspaceSize=1024M -XX:+CMSClassUnloadingEnabled"
+mvn '-B' clean package -Pnative com.google.cloud.tools:jib-maven-plugin:build -Duser.home=${HOME} -Djib.allowInsecureRegistries=true -Djib.to.image=$(oc get is/payment -o jsonpath='{.status.publicDockerImageRepository}')" -Djib.container.mainClass=bogus -Djib.container.ports="8080" -Djib.to.auth.username=$(oc whoami) -Djib.to.auth.password=$(oc whoami -t)
+----
+
 === Variables Used in This Demo ===
 
 Here are all the variables that are used for the different commands in this demo
