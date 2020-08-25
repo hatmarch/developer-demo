@@ -29,4 +29,10 @@ RUN dnf install -y httpd-tools \
 RUN curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz | \
     tar -xvzf - -C /usr/bin/ oc && chmod 755 /usr/bin/oc
 
+# graalvm for native compilation
+RUN curl -L https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-20.2.0/graalvm-ce-java11-linux-amd64-20.2.0.tar.gz | \
+    tar -zxvf - -C /usr/local/ && /usr/local/graalvm-ce-java11-20.2.0/bin/gu install native-image && \
+    export GRAAL_HOME=/usr/local/graalvm-ce-java11-20.2.0 && \
+    ln -s $GRAAL_HOME/bin/native-image /usr/local/bin
+    
 USER jboss

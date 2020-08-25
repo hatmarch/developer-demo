@@ -27,7 +27,7 @@ RUN dnf group install -y "Development Tools" && \
      bzip2-devel.x86_64
 
 # install skopeo, wget, and zsh
-RUN dnf install -y skopeo wget zsh
+RUN dnf install -y skopeo wget zsh jq
 
 # install prerequisites for the graalvm
 RUN dnf install -y gcc glibc-devel zlib-devel
