@@ -12,8 +12,8 @@ spec:
     inputs:
       params:
       - name: url
-        #value: 'https://github.com/hatmarch/fraud_detection_support.git'
-        value: 'http://gogs:3000/gogs/fraud_detection_support.git'
+        value: 'https://github.com/hatmarch/coolstore.git'
+        #value: 'http://gogs:3000/gogs/fraud_detection_support.git'
       - name: revision
         value: 'master'
       - name: message
