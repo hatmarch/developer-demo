@@ -91,7 +91,7 @@ spec:
       - update
       - payment
       - --image 
-      - $(resources.inage.url):latest
+      - $(resources.image.url):latest
       - --revision-name 
       - "{{.Service}}-{{.Generation}}"
       - -e 
