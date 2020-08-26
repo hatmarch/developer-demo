@@ -107,7 +107,17 @@ main() {
     echo "Initiatlizing git repository in Gogs and configuring webhooks"
     sed "s/@HOSTNAME/$GOGS_HOSTNAME/g" $DEMO_HOME/install/gogs/gogs-configmap.yaml | oc create -f - -n $cicd_prj
     oc rollout status deployment/gogs -n $cicd_prj
+
+    # There can be a race when the system is installing the pipeline operator in the $cicd_prj
+    echo -n "Waiting for Pipelines Operator to be installed in $cicd_prj..."
+    while [[ "$(oc get $(oc get csv -oname | grep pipelines) -o jsonpath='{.status.phase}')" != "Succeeded" ]]; do
+        echo -n "."
+        sleep 1
+    done
+
     oc create -f $DEMO_HOME/install/gogs/gogs-init-taskrun.yaml -n $cicd_prj
+    # This should fail if the taskrun fails
+    tkn tr logs -L -f
 
     # configure the nexus server
     echo "Configuring the nexus server..."
