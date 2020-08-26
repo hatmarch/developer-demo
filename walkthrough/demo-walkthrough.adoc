@@ -33,7 +33,7 @@ Tie this back to ACM and how it manages what operators are installed on the clus
 
 . Create Service: Developer Perspective: Add knative payment service
 .. Click Add, select image
-.. Image is: quay.io/mhildenb/homemade-serverless-native:1.1
+.. Image is: quay.io/mhildenb/homemade-serverless-java:1.1
 .. Select knative service
 .. Name the service `payment`
 .. Customize Scaling
@@ -47,9 +47,17 @@ image:payment-env.png[]
 . Go back to the Coolstore site and buy something
 . Go to the orders screen and show that the order is not processed
 
-== Create Event Source ==
+== Kafka Context and Topic Watch ==
 
-. First open a shell watch window to run the following command to see ORDERS coming in
+The goal of this section is to show that the kafka operator allows us to have a kafka cluster easily installed
+
+. Go to the dev-demo-support project
+. Go to the Developer Perspective and show kafka cluster
+. Show the AMQ Stream Operator
+. Go to the installed Operators
+. Click into the operator and show topics
+. Click into one of the topics (e.g. orders)
+. Setup watch for the two topics by First open a shell watch window to run the following command to see ORDERS coming in
 +
 ----
 oc exec -c kafka my-cluster-kafka-0 -n dev-demo-support -- /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders
@@ -60,8 +68,41 @@ oc exec -c kafka my-cluster-kafka-0 -n dev-demo-support -- /opt/kafka/bin/kafka-
 ----
 oc exec -c kafka my-cluster-kafka-0 -n dev-demo-support -- /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic payments
 ----
+
+== URL Invocation ==
+
+In this section we want to show that the route created for the payment service allows us to invoke the payment service directly
+
+. Go to the dev-demo-dev project
+. Go to developer perspective
+. Set Application to "Focus"
+. Show the payment knative Service and zoom in on this in the browser window
+. Setup Windows for Next Demonstration
+** Split the browser window to have developer perspective on top and coolstore on bottom
+** Open another shell from which you'll send the curl request
+** Windows should look something like this:
 +
-. Notice that the second the order is placed, the payment service spins up again
+image:window-setup-invoke.png[]
++
+. Have that shown in the window
+. Highlight (and copy) the route that is shown in the knative service
+. In the bottom shell, set the `KNATIVE_ROUTE` variable
++
+----
+KNATIVE_ROUTE=<pasted value>
+----
++
+. Next invoke this command from the shell
++
+----
+curl -i -H 'Content-Type: application/json' -X POST --data-binary @$DEMO_HOME/example/order-payload.json $KNATIVE_ROUTE
+----
++
+. Point out that the service spins up and puts something in the payment queue.  But our order is still unprocessed
+
+== Create Event Source ==
+
+. From the topology view, go the the knative payment service
 . From the payment service on the topology view, pull out blue arrow
 . Select `Event Source` from end of arrow
 . Fill in the following Kafka SOURCE:
@@ -285,7 +326,7 @@ For both examples, it assumes the copying of a payment service.  As such, note t
 * USER: your username for the public repository
 * PASSWORD: your password or TOKEN for the public repository
 * PROJECT: the project your image stream lives in (such as coolstore)
-* IMAGE_DEST: Replace this with your repository, project, image-name, and version, example: `quay.io/mhildenb/homemade-serverless-java:1.0`: 
+* IMAGE_DEST: Replace this with your repository, project, image-name, and version, example: `quay.io/mhildenb/homemade-serverless-native:1.0`: 
 
 ==== Image Registry is exposed publicly 
 
