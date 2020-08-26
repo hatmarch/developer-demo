@@ -4,7 +4,7 @@ set -Eeuo pipefail
 
 declare -r SCRIPT_DIR=$(cd -P $(dirname $0) && pwd)
 declare PROJECT_PREFIX="dev-demo"
-declare KAFKA_PROJECT="${PROJECT_PREFIX}-support"
+declare KAFKA_PROJECT_IN=""
 
 display_usage() {
 cat << EOF
@@ -33,7 +33,7 @@ get_and_validate_options() {
   # parse options
   while getopts ':k:p:fh' option; do
       case "${option}" in
-          k  ) kafka_flag=true; KAFKA_PROJECT="${OPTARG}";;
+          k  ) kafka_flag=true; KAFKA_PROJECT_IN="${OPTARG}";;
           p  ) p_flag=true; PROJECT_PREFIX="${OPTARG}";;
           f  ) full_flag=true;;
           h  ) display_usage; exit;;
@@ -49,11 +49,13 @@ get_and_validate_options() {
       exit 1
   fi
 
-  if [[ -z "${KAFKA_PROJECT}" ]]; then
+  if [[ ${kafka_flag:-} && -z "${KAFKA_PROJECT_IN}" ]]; then
       printf '%s\n\n' 'ERROR - Support project (KAFKA_PROJECT) must not be null' >&2
       display_usage >&2
       exit 1
   fi
+
+  KAFKA_PROJECT=${KAFKA_PROJECT_IN:-"${PROJECT_PREFIX}-support"}
 }
 
 remove-operator()
