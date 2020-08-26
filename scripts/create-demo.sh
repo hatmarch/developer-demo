@@ -66,6 +66,29 @@ main() {
         oc new-project $cicd_prj
     }
 
+    sup_prj="${PROJECT_PREFIX}-support"
+
+    # Allow the pipeline service account to push images into the dev account
+    oc policy add-role-to-user -n $dev_prj system:image-pusher system:serviceaccount:$cicd_prj:pipeline
+    
+    # TO support the knative task in the pipeline, we need edit access to the dev project
+    # FIXME: Make this more fine grained and limited to serving.knative.dev API group
+    oc policy add-role-to-user -n $dev_prj edit system:serviceaccount:$cicd_prj:pipeline
+
+    # 
+    # Install Tekton resources
+    #
+    echo "Installing Tekton supporting resources"
+
+    echo "Installing PVCs"
+    oc apply -R -f $DEMO_HOME/install/tekton/volumes
+
+    echo "Installing Tasks"
+    oc apply -R -f -n $cicd_prj $DEMO_HOME/install/tekton/tasks
+
+    echo "Installing tokenized pipeline"
+    sed "s/demo-dev/${dev_prj}/g" $DEMO_HOME/install/tekton/pipelines/payment-pipeline.yaml | sed "s/demo-support/${sup_prj}/g" | oc apply -n $cicd_prj -f -
+
     # Create a nexus server
     echo "Creating the nexus server in project $cicd_prj"
     oc apply -f $DEMO_HOME/install/nexus/nexus.yaml -n $cicd_prj
@@ -89,7 +112,6 @@ main() {
         oc new-project $dev_prj
     }
 
-    sup_prj="${PROJECT_PREFIX}-support"
     if [[ "${prereq_flag-""}" ]]; then
         echo "Installing pre-requisites in project $sup_prj"
         ${SCRIPT_DIR}/install-prereq.sh -k ${sup_prj}

@@ -25,6 +25,9 @@ spec:
       type: string
       description: Where the code is relative to the start of the GIT_REPO
       default: "."
+    - name: CACHE_VOLUME
+      description: "OPTIONAL: The name of a volume where cached build and image artefacts are stored."
+      default: empty-dir-volume
     # - name: IMAGE_URL
     #   type: string
     #   description: The URL or the repository that the image will be saved out to
@@ -63,10 +66,9 @@ spec:
       - checkout
     params:
     - name: DIRECTORY
-      value: source
-#      value: source/payment-service
-    # - name: CACHE
-    #   value: #directory in wrokspace volume
+      value: source/$(params.PATH_CONTEXT)
+    - name: CACHE
+      value: $(params.CACHE_VOLUME)
     - name: INSECUREREGISTRY
       value: "true"
     resources:
@@ -93,8 +95,8 @@ spec:
       - --revision-name 
       - "{{.Service}}-{{.Generation}}"
       - -e 
-      - "mp.messaging.outgoing.payments.bootstrap.servers=my-cluster-kafka-bootstrap.dev-demo-support:9092"
+      - "mp.messaging.outgoing.payments.bootstrap.servers=my-cluster-kafka-bootstrap.demo-support:9092"
       - -n
-      - dev-demo-dev
-      - --concurrency-limit=0
+      - demo-dev
+      - --concurrency-limit=1
 
