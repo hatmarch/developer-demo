@@ -298,7 +298,7 @@ objects:
               valueFrom:
                 configMapKeyRef:
                   name: coolstore-topics-cfg
-                  key: orders-topics-server
+                  key: orders-topic-server
           ports:
           - containerPort: 8443
             protocol: TCP
@@ -807,12 +807,12 @@ objects:
               valueFrom:
                 configMapKeyRef:
                   name: coolstore-topics-cfg
-                  key: orders-topics-server
+                  key: orders-topic-server
             - name: mp.messaging.incoming.payments.bootstrap.servers
               valueFrom:
                 configMapKeyRef:
                   name: coolstore-topics-cfg
-                  key: payments-topics-server
+                  key: payments-topic-server
           ports:
           - containerPort: 8080
             protocol: TCP

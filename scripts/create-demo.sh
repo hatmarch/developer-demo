@@ -66,6 +66,13 @@ main() {
         oc new-project $cicd_prj
     }
 
+    #create the dev project if it doesn't already exist
+    dev_prj="${PROJECT_PREFIX}-dev"
+    oc get ns $dev_prj 2>/dev/null  || { 
+        oc new-project $dev_prj
+    }
+
+    # Support project (optionally created in prerequisites)
     sup_prj="${PROJECT_PREFIX}-support"
 
     # Allow the pipeline service account to push images into the dev account
@@ -81,10 +88,10 @@ main() {
     echo "Installing Tekton supporting resources"
 
     echo "Installing PVCs"
-    oc apply -R -f $DEMO_HOME/install/tekton/volumes
+    oc apply -n $cicd_prj -R -f $DEMO_HOME/install/tekton/volumes
 
     echo "Installing Tasks"
-    oc apply -R -f -n $cicd_prj $DEMO_HOME/install/tekton/tasks
+    oc apply -n $cicd_prj -R -f $DEMO_HOME/install/tekton/tasks
 
     echo "Installing tokenized pipeline"
     sed "s/demo-dev/${dev_prj}/g" $DEMO_HOME/install/tekton/pipelines/payment-pipeline.yaml | sed "s/demo-support/${sup_prj}/g" | oc apply -n $cicd_prj -f -
@@ -105,12 +112,6 @@ main() {
     # configure the nexus server
     echo "Configuring the nexus server..."
     ${SCRIPT_DIR}/util-config-nexus.sh -n $cicd_prj -u admin -p admin123
-
-    #create the dev project if it doesn't already exist
-    dev_prj="${PROJECT_PREFIX}-dev"
-    oc get ns $dev_prj 2>/dev/null  || { 
-        oc new-project $dev_prj
-    }
 
     if [[ "${prereq_flag-""}" ]]; then
         echo "Installing pre-requisites in project $sup_prj"
