@@ -1,8 +1,8 @@
 # adapted from here since there is a problem getting this to write results
 apiVersion: tekton.dev/v1beta1
-kind: Task
+kind: ClusterTask
 metadata:
-  name: git-clone
+  name: internal-git-clone
 spec:
   workspaces:
   - name: workvol
