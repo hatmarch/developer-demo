@@ -33,7 +33,7 @@ Tie this back to ACM and how it manages what operators are installed on the clus
 
 . Create Service: Developer Perspective: Add knative payment service
 .. Click Add, select image
-.. Image is: quay.io/mhildenb/homemade-serverless-java:1.1
+.. Image is: `quay.io/mhildenb/homemade-serverless-java:1.1`
 .. Select knative service
 .. Name the service `payment`
 .. Customize Scaling
@@ -150,7 +150,15 @@ oc exec -i -c kafka my-cluster-kafka-0 -n dev-demo-support -- /opt/kafka/bin/kaf
 
 For the fastest services out there (such as quarkus native compilations) you are probably best off using the kafka spammer.  In a shell run the following commands to effectively download the spammer into the project and then rsh into it
 
-. Download the spammer into the proper project:
+. First show how whenever we put something on the order topic it spins up the service (do this from the third window)
++
+----
+oc exec -it -c kafka my-cluster-kafka-0 -n ${PROJECT_PREFIX}-support -- /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic orders
+----
++
+. Enter a couple items and see how a pod spins up (but it fails)
+** It processes orders too quickly to spin up concurrent requests.  Let's see what happens when we spam it
+. Cancel the producer window and instead download the "kafka spammer" into the proper project:
 +
 ----
 oc -n ${PROJECT_PREFIX}-support run kafka-spammer --image=quay.io/rhdevelopers/kafkaspammer:1.0.2 --env "mp.messaging.outgoing.mystream.topic=orders"
@@ -160,8 +168,8 @@ oc -n ${PROJECT_PREFIX}-support run kafka-spammer --image=quay.io/rhdevelopers/k
 . Run the following to find the pod and effectively rsh into it:
 +
 ----
-KAFKA_SPAMMER_POD=$(oc -n dev-demo-support get pod -l "run=kafka-spammer" -o jsonpath='{.items[0].metadata.name}')
-oc -n dev-demo-support exec -it $KAFKA_SPAMMER_POD -- /bin/sh
+KAFKA_SPAMMER_POD=$(oc -n ${PROJECT_PREFIX}-support get pod -l "run=kafka-spammer" -o jsonpath='{.items[0].metadata.name}')
+oc -n ${PROJECT_PREFIX}-support exec -it $KAFKA_SPAMMER_POD -- /bin/sh
 ----
 . Once on the pod, you can `curl` localhost using a path input that defines the number of concurrent requests you want to post to the topic.
 ** NOTE: Keep requests to 10 or lower and pods should scale as expected given the concurrently limits set on the knative service.  Much more than this and other factors (speed of processing, vicissitudes of kafka and eventing) cause fewer than expected pods to spin up
@@ -175,6 +183,20 @@ curl localhost:8080/${NUM_REQUESTS}
 
 == Create Tekton Pipeline ==
 
+Now let's say we want to change our payment service.  We could do this from s2i, but let's look at how we can quickly create a tekton pipeline to build our service from a git repo we have locally.  When our pipeline is complete it will look like this:
+
+image:pipeline-completed.png[]
+
+Let's create a pipeline that builds our knative pipeline service using the OpenShift Pipelines builder
+
+
+. Run the pipeline and when the UI form shows up, fill in the fields as seen in this image:
++
+image:start-pipeline-params.png[]
++
+. You will be routed to the pipeline run UI, notice the animation
+. Click on the logs tab and show the logging of the build
+. [red]#NOTE: logs for the build image step don't show in the UI until the very end.  Might need to show it in the console#
 The installation script creates a payment pipeline.  Might use pipeline builder to refine this pipeline
 ** Currently some tasks take in a lot of parameters; might be better to wrap clustertasks for easy setup 
 
