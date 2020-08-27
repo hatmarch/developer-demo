@@ -49,6 +49,26 @@ image:payment-env.png[]
 
 == Kafka Context and Topic Watch ==
 
+[IMPORTANT]
+.Shell setup
+====
+Every shell referenced should be run inside a docker container that has all the necessary commands for the demo.  here's what you do
+
+. Go to the root of the `developer-demo` directory on your local machine
+. Run the following docker command
++
+----
+docker run -it -v ~/.kube:/home/jboss/.kube -v ~/.oh-my-zsh:/home/jboss/.oh-my-zsh -v $(pwd):/workspaces/developer-demo quay.io/mhildenb/dev-demo-shell /bin/zsh
+----
++
+. Then run the following command to setup your environment
++
+----
+cd /workspaces/developer-demo
+. scripts/shell-setup.sh
+----
+====
+
 The goal of this section is to show that the kafka operator allows us to have a kafka cluster easily installed
 
 . Go to the dev-demo-support project
@@ -181,8 +201,96 @@ curl localhost:8080/${NUM_REQUESTS}
 ----
 
 
-== Create Tekton Pipeline ==
+== Create Tekton Pipeline with Builder ==
 
+NOTE: These instructions assume a `PROJECT_PREFIX` of `dev-demo`
+
+Now let's say we want to create a little pipeline to deploy our service to staging.  We want the pipeline to do two things:
+
+1. Tag the current dev latest version with a version number in staging
+2. Create a new knative service in staging that points to that newly created tag
+
+. From the `$dev-demo-dev` project, open the Pipeline Builder
+. Create an image resource that points to the staging project
++
+----
+image-registry.openshift-image-registry.svc:5000/dev-demo-stage/payment-stage
+----
++
+. Create a new parameter called `VERSION`
+. Create a new task of type `openshift-client-local`
+. Enter the following arguments on the command
++
+----
+oc tag -n dev-demo-stage --reference-policy=local dev-demo-dev/payment:latest dev-demo-stage/payment-stage:$(params.VERSION)
+----
++
+. Be sure to point out the `$(params.VERSION)`
+. Then hit the plus to the right of the oc task
+. Select the `kn-service` ClusterTask and fill in the args accordingly in the image below
+** For ease of pasting, the environmental arg is *with no quotes*
++
+----
+mp.messaging.outgoing.payments.bootstrap.servers=my-cluster-kafka-bootstrap.dev-demo-support:9092
+----
++
+. Your pipeline should look like this:
++
+image:pipeline-builder-kn-service.png[]
++
+. Run the pipeline filling it in as follows:
++
+image:oc-start-pipeline-ui.png[]
++
+. Click the "Logs" tab to watch it run
+. The pipeline fail (this is due to the service account not having the proper permissions) and you will see this error in the logs
++
+image:oc-error.png[]
++
+. From a shell, run the following commands to update the permissions for the pipeline account
++
+----
+oc adm policy add-role-to-user -n dev-demo-stage kn-deployer system:serviceaccount:dev-demo-dev:pipeline
+----
++
+. And rerun the pipeline by going to Actions > Rerun
++
+. It should complete this time.  When the logs indicate it has finished, go to the Developer Perspective of the dev-demo-stage
++
+. Click on the payment-service and get the route that was created and paste it into value `KN_ROUTE`
+. Then run this command to call the route (whilst watching payment queue from before)
++
+----
+hey -n 100 -c 100 -m POST -D $DEMO_HOME/example/order-payload.json -T "application/json" $KN_ROUTE
+----
+
+== Edit Payment Service (Code Ready Workspaces) ==
+
+We actually have this service setup on a local git repo.  This git repo triggers a pipeline that we have created in the cicd project.  To tell openshift about this, we need to update our payment service with some annotations
+
+. First, go to the codeready project and show the installed operator
+** could make up a conceit that this is from CRW
+. Then navigate back to the Developer Perspective and center in on the payment service
+. Run the following command in the shell
+** NOTE: The uri is referencing an https endpoint as that is the only way CRW recognizes devfiles
+----
+kn service update payment --annotation "app.openshift.io/vcs-ref=master" --annotation "app.openshift.io/vcs-uri=https://github.com/hatmarch/coolstore.git" --revision-name "{{.Service}}-{{.Generation}}" -n dev-demo-dev
+----
+. If the command was successful, a badge should now appear indicating that the service is recognized as one that can be edited with CRW
+** NOTE: This would normally come in when using S2I (git repo) but this functionality isn't currently exposed for knative services in the UI
++
+image:crw-badge.png[]
++
+. Click on the badge and CRW should start loading (possibly after you login and create a CRW with your OCP credentials)
+. In the meantime, in a new tab, navigate to the url in the annotation uri and show the devfile
+** scroll through the devfile to explain at a high level the contents
+. Go back to the CRW tab
+
+[red]#TODO: Finish this section#
+
+image:crw-payment-service.png[]
+
+== TODO
 Now let's say we want to change our payment service.  We could do this from s2i, but let's look at how we can quickly create a tekton pipeline to build our service from a git repo we have locally.  When our pipeline is complete it will look like this:
 
 image:pipeline-completed.png[]
