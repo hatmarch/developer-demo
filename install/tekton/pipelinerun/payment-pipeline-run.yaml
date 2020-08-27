@@ -9,13 +9,18 @@ spec:
   # uncomment these parameters if you want to point to the internal git repo, pointing external might
   # make iteration easier
   - name: GIT_REPO
-    # value: "http://gogs:3000/gogs/coolstore.git"
+    value: "http://gogs:3000/gogs/coolstore.git"
     #value: "http://gogs:3000/gogs/eventinghello.git"
-    value: "https://github.com/hatmarch/coolstore.git"
+    #value: "https://github.com/hatmarch/coolstore.git"
   - name: PATH_CONTEXT
     value: "payment-service"
   - name: CACHE_VOLUME
     value: cache-vol
+  - name: SERVICE_NAME
+    value: payment
+  # - name: KN_ADDITIONAL_ARGS
+  #   value:
+  #     - --log-http
   resources:
   - name: app-image
     resourceSpec:

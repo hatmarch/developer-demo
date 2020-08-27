@@ -28,6 +28,12 @@ spec:
     - name: CACHE_VOLUME
       description: "OPTIONAL: The name of a volume where cached build and image artefacts are stored."
       default: empty-dir-volume
+    - name: SERVICE_NAME
+      description: The name of the knative service to deploy of the provided image
+    - name: KN_ADDITIONAL_ARGS
+      type: array
+      description: "Additional Arguments to pass to knative (default: none)"
+      default: []
     # - name: IMAGE_URL
     #   type: string
     #   description: The URL or the repository that the image will be saved out to
@@ -81,22 +87,24 @@ spec:
   - name: deploy-service
     taskRef:
       kind: ClusterTask
-      name: kn
+      name: kn-service
     runAfter:
       - build-image
+    resources:
+      inputs:
+      - name: image
+        resource: app-image
     params:
-    - name: ARGS
-      value:
-      - service
-      - update
-      - payment
-      - --image 
-      - $(resources.image.url):latest
-      - --revision-name 
-      - "{{.Service}}-{{.Generation}}"
-      - -e 
-      - "mp.messaging.outgoing.payments.bootstrap.servers=my-cluster-kafka-bootstrap.demo-support:9092"
-      - -n
-      - demo-dev
-      - --concurrency-limit=1
-
+    - name: SERVICE_NAME
+      value: $(params.SERVICE_NAME)
+    - name: TARGET_PROJECT
+      value: demo-dev
+    - name: CONCURRENCY_LIMIT
+      value: "1"
+    - name: ADDITIONAL_ARGS
+      value: 
+      # - $(params.KN_ADDITIONAL_ARGS)
+      - -l
+      - "app.kubernetes.io/part-of=focus"
+    #   - -e 
+    #   - "mp.messaging.outgoing.payments.bootstrap.servers=my-cluster-kafka-bootstrap.demo-support:9092"

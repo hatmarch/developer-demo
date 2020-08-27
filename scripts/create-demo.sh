@@ -75,13 +75,6 @@ main() {
     # Support project (optionally created in prerequisites)
     sup_prj="${PROJECT_PREFIX}-support"
 
-    # Allow the pipeline service account to push images into the dev account
-    oc policy add-role-to-user -n $dev_prj system:image-pusher system:serviceaccount:$cicd_prj:pipeline
-    
-    # TO support the knative task in the pipeline, we need edit access to the dev project
-    # FIXME: Make this more fine grained and limited to serving.knative.dev API group
-    oc policy add-role-to-user -n $dev_prj edit system:serviceaccount:$cicd_prj:pipeline
-
     # 
     # Install Tekton resources
     #
@@ -114,6 +107,15 @@ main() {
         echo -n "."
         sleep 1
     done
+
+    # Allow the pipeline service account to push images into the dev account
+    oc policy add-role-to-user -n $dev_prj system:image-pusher system:serviceaccount:$cicd_prj:pipeline
+    
+    # Add a cluster role that allows fined grained access to knative resources without granting edit
+    oc apply -f $DEMO_HOME/install/tekton/roles/kn-deployer-role.yaml
+    # ..and assign the pipeline service account that role in the dev project
+    oc adm policy add-cluster-role-to-user -n $dev_prj kn-deployer system:serviceaccount:$cicd_prj:pipeline
+
 
     oc create -f $DEMO_HOME/install/gogs/gogs-init-taskrun.yaml -n $cicd_prj
     # This should fail if the taskrun fails
