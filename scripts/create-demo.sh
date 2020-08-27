@@ -72,6 +72,12 @@ main() {
         oc new-project $dev_prj
     }
 
+    # create a staging project if it doesn't already exist
+    stage_prj="${PROJECT_PREFIX}-stage"
+    oc get ns $stage_prj 2>/dev/null  || { 
+        oc new-project $stage_prj
+    }
+
     # Support project (optionally created in prerequisites)
     sup_prj="${PROJECT_PREFIX}-support"
 
@@ -83,8 +89,9 @@ main() {
     echo "Installing PVCs"
     oc apply -n $cicd_prj -R -f $DEMO_HOME/install/tekton/volumes
 
-    echo "Installing Tasks"
+    echo "Installing Tasks (in $cicd_prj and $stage_prj)"
     oc apply -n $cicd_prj -R -f $DEMO_HOME/install/tekton/tasks
+    oc apply -n $stage_prj -f $DEMO_HOME/install/tekton/tasks/oc-client-local-task.yaml
 
     echo "Installing tokenized pipeline"
     sed "s/demo-dev/${dev_prj}/g" $DEMO_HOME/install/tekton/pipelines/payment-pipeline.yaml | sed "s/demo-support/${sup_prj}/g" | oc apply -n $cicd_prj -f -
@@ -116,6 +123,11 @@ main() {
     # ..and assign the pipeline service account that role in the dev project
     oc adm policy add-cluster-role-to-user -n $dev_prj kn-deployer system:serviceaccount:$cicd_prj:pipeline
 
+    # allow any pipeline in the dev project access to registries in the staging project
+    oc policy add-role-to-user -n $stage_prj registry-editor system:serviceaccount:$dev_prj:pipeline
+
+    # NOTE: We'll add these permissions as part of the walkthrough
+    # oc adm policy add-role-to-user -n $stage_prj kn-deployer system:serviceaccount:$dev_prj:pipeline
 
     oc create -f $DEMO_HOME/install/gogs/gogs-init-taskrun.yaml -n $cicd_prj
     # This should fail if the taskrun fails

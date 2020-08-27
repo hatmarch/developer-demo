@@ -112,8 +112,11 @@ main() {
         remove-crds "checlusters.org.eclipse.che" || true
     fi
 
+    stage_prj="${PROJECT_PREFIX}-stage"
+    echo "Deleting project $stage_prj"
+    oc delete project "${stage_prj}" || true
+    
     dev_prj="${PROJECT_PREFIX}-dev"
-
     echo "Deleting project $dev_prj"
     oc delete project "${dev_prj}" || true
 
