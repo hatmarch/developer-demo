@@ -85,6 +85,23 @@ main() {
 
     get_and_validate_options "$@"
 
+    # perhaps delete all knative services first
+
+    stage_prj="${PROJECT_PREFIX}-stage"
+    echo "Deleting project $stage_prj"
+    oc delete project "${stage_prj}" || true
+    
+    dev_prj="${PROJECT_PREFIX}-dev"
+    echo "Deleting project $dev_prj"
+    oc delete project "${dev_prj}" || true
+
+    echo "Uninstalling support project $KAFKA_PROJECT"
+    oc delete project "${KAFKA_PROJECT}" || true
+
+    cicd_prj="${PROJECT_PREFIX}-cicd"
+    echo "Uninstalling cicd project ${cicd_prj}"
+    oc delete project "${cicd_prj}" || true
+
     if [[ "${full_flag:-""}" ]]; then
         echo "Uninstalling knative eventing"
         oc delete knativeeventings.operator.knative.dev knative-eventing -n knative-eventing || true
@@ -112,20 +129,22 @@ main() {
         remove-crds "checlusters.org.eclipse.che" || true
     fi
 
-    stage_prj="${PROJECT_PREFIX}-stage"
-    echo "Deleting project $stage_prj"
-    oc delete project "${stage_prj}" || true
+    oc delete project codeready || true
+
+    # stage_prj="${PROJECT_PREFIX}-stage"
+    # echo "Deleting project $stage_prj"
+    # oc delete project "${stage_prj}" || true
     
-    dev_prj="${PROJECT_PREFIX}-dev"
-    echo "Deleting project $dev_prj"
-    oc delete project "${dev_prj}" || true
+    # dev_prj="${PROJECT_PREFIX}-dev"
+    # echo "Deleting project $dev_prj"
+    # oc delete project "${dev_prj}" || true
 
-    echo "Uninstalling support project $KAFKA_PROJECT"
-    oc delete project "${KAFKA_PROJECT}" || true
+    # echo "Uninstalling support project $KAFKA_PROJECT"
+    # oc delete project "${KAFKA_PROJECT}" || true
 
-    cicd_prj="${PROJECT_PREFIX}-cicd"
-    echo "Uninstalling cicd project ${cicd_prj}"
-    oc delete project "${cicd_prj}" || true
+    # cicd_prj="${PROJECT_PREFIX}-cicd"
+    # echo "Uninstalling cicd project ${cicd_prj}"
+    # oc delete project "${cicd_prj}" || true
 }
 
 main "$@"

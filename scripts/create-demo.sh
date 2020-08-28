@@ -13,6 +13,7 @@ $0: Create Developer Demo --
   
     -i         [optional] Install prerequisites
     -p <TEXT>  [optional] Project prefix to use.  Defaults to "dev-demo"
+    -k         [optional] Install kafka cluster (only works with -i)
 
 EOF
 }
@@ -33,6 +34,7 @@ get_and_validate_options() {
   while getopts ':ip:h' option; do
       case "${option}" in
           i  ) prereq_flag=true;;
+          k  ) kakfa_flag=true;;
           p  ) p_flag=true; PROJECT_PREFIX="${OPTARG}";;
           h  ) display_usage; exit;;
           \? ) printf "%s\n\n" "  Invalid option: -${OPTARG}" >&2; display_usage >&2; exit 1;;
@@ -80,6 +82,31 @@ main() {
 
     # Support project (optionally created in prerequisites)
     sup_prj="${PROJECT_PREFIX}-support"
+    oc get ns $sup_prj 2>/dev/null  || { 
+        oc new-project $sup_prj
+    }
+
+    # # Create a nexus server
+    # echo "Creating the nexus server in project $cicd_prj"
+    # oc apply -f $DEMO_HOME/install/nexus/nexus.yaml -n $cicd_prj
+
+    # Create the gogs server
+    echo "Creating gogs server in project $cicd_prj"
+    oc apply -f $DEMO_HOME/install/gogs/gogs.yaml -n $cicd_prj
+    GOGS_HOSTNAME=$(oc get route gogs -o template --template='{{.spec.host}}' -n $cicd_prj)
+    echo "Initiatlizing git repository in Gogs and configuring webhooks"
+    sed "s/@HOSTNAME/$GOGS_HOSTNAME/g" $DEMO_HOME/install/gogs/gogs-configmap.yaml | oc apply -f - -n $cicd_prj
+ 
+    # Install pre-reqs before tekton
+    if [[ -n "${prereq_flag:-}" ]]; then
+        if [[ -n "${kafka_flag:-}" ]]; then
+            echo "Installing pre-requisites with kafka in ${sup_prj}"
+            ${SCRIPT_DIR}/install-prereq.sh -s ${sup_prj} -k
+        else
+            echo "Installing pre-requisites without kafka"
+            ${SCRIPT_DIR}/install-prereq.sh -s ${sup_prj}
+        fi
+    fi
 
     # 
     # Install Tekton resources
@@ -89,24 +116,17 @@ main() {
     echo "Installing PVCs"
     oc apply -n $cicd_prj -R -f $DEMO_HOME/install/tekton/volumes
 
-    echo "Installing Tasks (in $cicd_prj and $stage_prj)"
+    echo "Installing Tasks (in $cicd_prj and $dev_prj)"
     oc apply -n $cicd_prj -R -f $DEMO_HOME/install/tekton/tasks
-    oc apply -n $stage_prj -f $DEMO_HOME/install/tekton/tasks/oc-client-local-task.yaml
+    oc apply -n $dev_prj -f $DEMO_HOME/install/tekton/tasks/oc-client-local-task.yaml
 
     echo "Installing tokenized pipeline"
     sed "s/demo-dev/${dev_prj}/g" $DEMO_HOME/install/tekton/pipelines/payment-pipeline.yaml | sed "s/demo-support/${sup_prj}/g" | oc apply -n $cicd_prj -f -
 
-    # Create a nexus server
-    echo "Creating the nexus server in project $cicd_prj"
-    oc apply -f $DEMO_HOME/install/nexus/nexus.yaml -n $cicd_prj
-
-    # Create the gogs server
-    echo "Creating gogs server in project $cicd_prj"
-    oc apply -f $DEMO_HOME/install/gogs/gogs.yaml -n $cicd_prj
-    GOGS_HOSTNAME=$(oc get route gogs -o template --template='{{.spec.host}}' -n $cicd_prj)
-    echo "Initiatlizing git repository in Gogs and configuring webhooks"
-    sed "s/@HOSTNAME/$GOGS_HOSTNAME/g" $DEMO_HOME/install/gogs/gogs-configmap.yaml | oc create -f - -n $cicd_prj
-    oc rollout status deployment/gogs -n $cicd_prj
+    echo "Installing Tekton Triggers"
+    sed "s/demo-dev/${dev_prj}/g" $DEMO_HOME/install/tekton/triggers/triggertemplate.yaml | oc apply -n $cicd_prj -f -
+    oc apply -n $cicd_prj -f $DEMO_HOME/install/tekton/triggers/gogs-triggerbinding.yaml
+    oc apply -n $cicd_prj -f $DEMO_HOME/install/tekton/triggers/eventlistener-gogs.yaml
 
     # There can be a race when the system is installing the pipeline operator in the $cicd_prj
     echo -n "Waiting for Pipelines Operator to be installed in $cicd_prj..."
@@ -126,22 +146,28 @@ main() {
     # allow any pipeline in the dev project access to registries in the staging project
     oc policy add-role-to-user -n $stage_prj registry-editor system:serviceaccount:$dev_prj:pipeline
 
-    # NOTE: We'll add these permissions as part of the walkthrough
-    # oc adm policy add-role-to-user -n $stage_prj kn-deployer system:serviceaccount:$dev_prj:pipeline
+    # Allow tekton to deploy a knative service to the staging project
+    oc adm policy add-role-to-user -n $stage_prj kn-deployer system:serviceaccount:$dev_prj:pipeline
 
-    oc create -f $DEMO_HOME/install/gogs/gogs-init-taskrun.yaml -n $cicd_prj
+    # Seeding the .m2 cache
+    echo "Seeding the .m2 cache"
+    oc apply -n $cicd_prj -f $DEMO_HOME/install/tekton/init/copy-to-workspace-task.yaml 
+    oc create -n $cicd_prj -f install/tekton/init/seed-cache-task-run.yaml
+    # This should cause everything to block and show output
+    tkn tr logs -L -f -n $cicd_prj 
+
+    # wait for gogs rollout to complete
+    oc rollout status deployment/gogs -n $cicd_prj
+
+    echo "Initializing gogs"
+    oc create -n $cicd_prj -f $DEMO_HOME/install/gogs/gogs-init-taskrun.yaml
     # This should fail if the taskrun fails
-    tkn tr logs -L -f
+    tkn tr logs -L -f -n $cicd_prj 
 
-    # configure the nexus server
-    echo "Configuring the nexus server..."
-    ${SCRIPT_DIR}/util-config-nexus.sh -n $cicd_prj -u admin -p admin123
+    # # configure the nexus server
+    # echo "Configuring the nexus server..."
+    # ${SCRIPT_DIR}/util-config-nexus.sh -n $cicd_prj -u admin -p admin123
 
-    if [[ "${prereq_flag-""}" ]]; then
-        echo "Installing pre-requisites in project $sup_prj"
-        ${SCRIPT_DIR}/install-prereq.sh -k ${sup_prj}
-    fi
- 
     echo "Install configmaps"
     oc apply -R -n $dev_prj -f $DEMO_HOME/install/config/
 

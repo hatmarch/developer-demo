@@ -11,7 +11,8 @@ $0: Install Developer Demo Prerequisites --
 
   Usage: ${0##*/} [ OPTIONS ]
   
-    -k <TEXT>  [optional] The project to install the kafka cluster to (kafka cluster not created if not provided)
+    -s <TEXT>  [required] The name of the support project (where the kafka cluster will eventually go)
+    -k         [optional] Whether to actually create a kafka cluster in the support project
 
 EOF
 }
@@ -29,9 +30,10 @@ get_and_validate_options() {
 
   
   # parse options
-  while getopts ':k:h' option; do
+  while getopts ':s:kh' option; do
       case "${option}" in
-          k  ) kafka_flag=true; KAFKA_PROJECT="${OPTARG}";;
+          k  ) kafka_flag=true;;
+          s  ) sup_prj="${OPTARG}";;
           h  ) display_usage; exit;;
           \? ) printf "%s\n\n" "  Invalid option: -${OPTARG}" >&2; display_usage >&2; exit 1;;
           :  ) printf "%s\n\n%s\n\n\n" "  Option -${OPTARG} requires an argument." >&2; display_usage >&2; exit 1;;
@@ -39,8 +41,8 @@ get_and_validate_options() {
   done
   shift "$((OPTIND - 1))"
 
-  if [[ "${kafka_flag:-""}" && -z "${KAFKA_PROJECT:-}" ]]; then
-      printf '%s\n\n' 'ERROR - KAFKA_PROJECT must not be null' >&2
+  if [[ -z "${sup_prj:-}" ]]; then
+      printf '%s\n\n' 'ERROR - Support project must not be null, specify with -s' >&2
       display_usage >&2
       exit 1
   fi
@@ -99,21 +101,21 @@ main()
     echo "Waiting for the operator to install the Kafka CRDs"
     wait_for_crd "crd/kafkas.kafka.strimzi.io"
 
-    if [[ "${kafka_flag:-""}" ]]; then
-        oc get ns "${KAFKA_PROJECT}" 2>/dev/null  || { 
-            oc new-project "${KAFKA_PROJECT}"
+    if [[ -n "${kafka_flag:-}" ]]; then
+        oc get ns "${sup_prj}" 2>/dev/null  || { 
+            oc new-project "${sup_prj}"
         }
 
         # use the default parameter values
-        oc process -f "$DEMO_HOME/install/kafka/kafka-template.yaml" | oc apply -n $KAFKA_PROJECT -f -
+        oc process -f "$DEMO_HOME/install/kafka/kafka-template.yaml" | oc apply -n $sup_prj -f -
 
         # install the necessary kafka instance and topics
-        oc apply -f "$DEMO_HOME/install/kafka/kafka-orders-topic.yaml" -n $KAFKA_PROJECT
-        oc apply -f "$DEMO_HOME/install/kafka/kafka-payments-topic.yaml" -n $KAFKA_PROJECT
+        oc apply -f "$DEMO_HOME/install/kafka/kafka-orders-topic.yaml" -n $sup_prj
+        oc apply -f "$DEMO_HOME/install/kafka/kafka-payments-topic.yaml" -n $sup_prj
 
         # wait until the cluster is deployed
         echo "Waiting up to 30 minutes for kafka cluster to be ready"
-        oc wait --for=condition=Ready kafka/my-cluster --timeout=30m -n $KAFKA_PROJECT
+        oc wait --for=condition=Ready kafka/my-cluster --timeout=30m -n $sup_prj
         echo "Kafka cluster is ready."
     fi
 
@@ -141,7 +143,10 @@ main()
 
     # NOTE: kafka eventing needs to be installed in same project as knative eventing (this is baked into the yaml) but it also
     # needs to properly reference the cluster that we'll be using
-    sed "s#support-prj#${KAFKA_PROJECT}#" $DEMO_HOME/install/kafka-eventing/kafka-eventing.yaml | oc apply -f -
+    sed "s#support-prj#${sup_prj}#" $DEMO_HOME/install/kafka-eventing/kafka-eventing.yaml | oc apply -f -
+
+    echo "Installing CodeReady Workspaces"
+    ${SCRIPT_DIR}/install-crw.sh codeready
 
     # Ensure pipelines is installed
     wait_for_crd "crd/pipelines.tekton.dev"

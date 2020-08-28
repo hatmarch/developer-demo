@@ -20,19 +20,7 @@ oc new-project $TARGET_PROJECT
 # EOF
 
 echo "Installing CodeReady Workspace Operator Subscription"
-cat <<EOF | oc apply -n $TARGET_PROJECT -f -
-apiVersion: operators.coreos.com/v1alpha1
-kind: Subscription
-metadata:
-  name: codeready-workspaces
-spec:
-  channel: latest
-  installPlanApproval: Automatic
-  name: codeready-workspaces
-  source: redhat-operators
-  sourceNamespace: openshift-marketplace
-  startingCSV: crwoperator.v2.3.0
-EOF
+oc apply -n $TARGET_PROJECT -f $DEMO_HOME/install/crw/crw-subscription.yaml
 
 # Wait for checluster to be a thing
 echo "Waiting for CheCluster CRDs"
