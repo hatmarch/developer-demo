@@ -29,6 +29,39 @@ Tie this back to ACM and how it manages what operators are installed on the clus
 . Launch the coolstore from the badge on the coolstore service on the dev perspective
 ** Can use this to contextualize with the above diagram (or from these slides link:https://docs.google.com/presentation/d/1XtvEx9cMRqrlMcY_EdiIsBR78WJawoSfXvFiyt66pS4/edit#slide=id.g72cacdd2b4_0_120[here])
 
+== Operators and Creation of Kafka Cluster ==
+
+. Start on the installed operators page
+. Go to the dev-demo-support project
+. Click on AMQStreams
+. Select the Kafka Tab and click "Create Kafka"
++
+image:create-kafka.png[]
++
+. Show the UI form for creation
+** Mention the YAML view
+** set name to `my-cluster`
+** Show some of the things that can be configured in Kafka Brokers such as number of zookeepers desired
+*** perhaps set this to `1`
+. [blue]#Mention that the YAML option is key as ACM could install both the operator and the CR yaml that automatically deploys a kafka cluster of the appropriate size#
+*** Kafka configuration option 'offsets.topic.replication.factor' should be set to 1 because 'spec.kafka.replicas' is 1
+*** Kafka configuration option `transaction.state.log.replication.factor` should be set to 1 because 'spec.kafka.replicas' is 1
+** Accept all other default values
++
+image:kafka-form.png[]
++
+. You will be returned to the Kakfas list.  Select the new "my-cluster" entry, then select "Resources" and scroll through the list
++
+image:kafka-resources.png[]
++
+. While we're waiting for the creation of the cluster to complete, add 2 topics, one for `orders` and one for `payments`
+** scroll right to go to the Kafka Topic
+** Be sure to set partitions to `100`
++
+image:kafka-topic-payments.png[]
++
+. Go back to the details and scroll down to conditions and you will see the appropriate message regarding the state of the cluster
+
 == Create Payment Service ==
 
 . Create Service: Developer Perspective: Add knative payment service
@@ -207,17 +240,15 @@ NOTE: These instructions assume a `PROJECT_PREFIX` of `dev-demo`
 
 Now let's say we want to create a little pipeline to deploy our service to staging.  We want the pipeline to do two things:
 
-1. Tag the current dev latest version with a version number in staging
-2. Create a new knative service in staging that points to that newly created tag
+. Tag the current dev latest version with a version number in staging
+. Create a new knative service in staging that points to that newly created tag
 
-. From the `$dev-demo-dev` project, open the Pipeline Builder
-. Create an image resource that points to the staging project
-+
-----
-image-registry.openshift-image-registry.svc:5000/dev-demo-stage/payment-stage
-----
-+
+Here on the instructions on how we'll do this
+
+. From the `dev-demo-dev` project, open the Pipeline Builder
+. Name the pipeline `deploy-staging`
 . Create a new parameter called `VERSION`
+. Create a new image resource called `stage-image`
 . Create a new task of type `openshift-client-local`
 . Enter the following arguments on the command
 +
@@ -239,6 +270,12 @@ mp.messaging.outgoing.payments.bootstrap.servers=my-cluster-kafka-bootstrap.dev-
 image:pipeline-builder-kn-service.png[]
 +
 . Run the pipeline filling it in as follows:
+** NOTE: Enter a new image resource that points to the *staging image stream*
++
+----
+image-registry.openshift-image-registry.svc:5000/dev-demo-stage/payment-stage
+----
++
 +
 image:oc-start-pipeline-ui.png[]
 +
@@ -250,7 +287,7 @@ image:oc-error.png[]
 . From a shell, run the following commands to update the permissions for the pipeline account
 +
 ----
-oc adm policy add-role-to-user -n dev-demo-stage kn-deployer system:serviceaccount:dev-demo-dev:pipeline
+oc adm policy add-cluster-role-to-user -n dev-demo-stage kn-deployer system:serviceaccount:dev-demo-dev:pipeline
 ----
 +
 . And rerun the pipeline by going to Actions > Rerun
