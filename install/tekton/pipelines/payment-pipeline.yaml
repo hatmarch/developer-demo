@@ -43,7 +43,8 @@ spec:
   tasks:
   - name: checkout
     taskRef:
-      name: git-clone
+      name: internal-git-clone
+      kind: ClusterTask
     workspaces:
     - name: workvol
       workspace: local-workspace
