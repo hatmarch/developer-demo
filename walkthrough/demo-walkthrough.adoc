@@ -14,26 +14,25 @@ This demo centers around the creation of a serverless payment service that suppo
 
 image:coolstore-arch.png[]
 
-== Optional: Show Operator UI ==
+== Setup Tips Prior to Walkthrough ==
 
-Tie this back to ACM and how it manages what operators are installed on the cluster, such as those that are key to the demonstration.  This include:
+. Open CodeReadyWorkspaces with the devfile to ensure it is initialized at least once
 
-* Serverless Operator
-* Pipelines Operator
-* Kafka Operator
-* Kafka Event Source
 
 == Coolstore Introduction
 
 . Start with `$PROJECT_PREFIX`-dev project, which should have the Red Hat Coolstore setup minus the payment service
-. Launch the coolstore from the badge on the coolstore service on the dev perspective
-** Can use this to contextualize with the above diagram (or from these slides link:https://docs.google.com/presentation/d/1XtvEx9cMRqrlMcY_EdiIsBR78WJawoSfXvFiyt66pS4/edit#slide=id.g72cacdd2b4_0_120[here])
+. It will currently have two services failing, this will be due to a kafka cluster not having been deployed
 
 == Operators and Creation of Kafka Cluster ==
 
-. Start on the installed operators page
+. Start with operators are installed on the cluster, such as those that are key to the demonstration.  This include:
+* Serverless Operator
+* Pipelines Operator
+* Kafka Operator
+* Kafka Event Source
 . Go to the dev-demo-support project
-. Click on AMQStreams
+. Click on `AMQStreams` operator
 . Select the Kafka Tab and click "Create Kafka"
 +
 image:create-kafka.png[]
@@ -61,12 +60,14 @@ image:kafka-resources.png[]
 image:kafka-topic-payments.png[]
 +
 . Go back to the details and scroll down to conditions and you will see the appropriate message regarding the state of the cluster
++
+. Finally, switch to the Developer Perspective of that project to show the kafka resources spinning up
 
 == Create Payment Service ==
 
 . Create Service: Developer Perspective: Add knative payment service
 .. Click Add, select image
-.. Image is: `quay.io/mhildenb/homemade-serverless-java:1.1`
+.. Image is: `quay.io/mhildenb/coolstore-payment-java:latest`
 .. Select knative service
 .. Name the service `payment`
 .. Customize Scaling
@@ -76,7 +77,7 @@ image:kafka-topic-payments.png[]
 +
 image:payment-env.png[]
 +
-*** Label: app.kubernetes.io/part-of=focus
+*** Label: `app.kubernetes.io/part-of=focus`
 . Go back to the Coolstore site and buy something
 . Go to the orders screen and show that the order is not processed
 
@@ -102,14 +103,13 @@ cd /workspaces/developer-demo
 ----
 ====
 
-The goal of this section is to show that the kafka operator allows us to have a kafka cluster easily installed
+. Go to the `dev-demo-dev` project and show the coolstore app in the "Topology View" of the "Developer Perspective"
+. Setup the following options on the developer perspective:
+** Display Options > Check the `Pod Count` box
+** Application > Select `Focus` to show only the services relevant to the coolstore
+. Launch the coolstore from the badge on the coolstore service on the dev perspective
+** Can use this to contextualize with the above diagram (or from these slides link:https://docs.google.com/presentation/d/1XtvEx9cMRqrlMcY_EdiIsBR78WJawoSfXvFiyt66pS4/edit#slide=id.g72cacdd2b4_0_120[here])
 
-. Go to the dev-demo-support project
-. Go to the Developer Perspective and show kafka cluster
-. Show the AMQ Stream Operator
-. Go to the installed Operators
-. Click into the operator and show topics
-. Click into one of the topics (e.g. orders)
 . Setup watch for the two topics by First open a shell watch window to run the following command to see ORDERS coming in
 +
 ----
@@ -122,36 +122,6 @@ oc exec -c kafka my-cluster-kafka-0 -n dev-demo-support -- /opt/kafka/bin/kafka-
 oc exec -c kafka my-cluster-kafka-0 -n dev-demo-support -- /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic payments
 ----
 
-== URL Invocation ==
-
-In this section we want to show that the route created for the payment service allows us to invoke the payment service directly
-
-. Go to the dev-demo-dev project
-. Go to developer perspective
-. Set Application to "Focus"
-. Show the payment knative Service and zoom in on this in the browser window
-. Setup Windows for Next Demonstration
-** Split the browser window to have developer perspective on top and coolstore on bottom
-** Open another shell from which you'll send the curl request
-** Windows should look something like this:
-+
-image:window-setup-invoke.png[]
-+
-. Have that shown in the window
-. Highlight (and copy) the route that is shown in the knative service
-. In the bottom shell, set the `KNATIVE_ROUTE` variable
-+
-----
-KNATIVE_ROUTE=<pasted value>
-----
-+
-. Next invoke this command from the shell
-+
-----
-curl -i -H 'Content-Type: application/json' -X POST --data-binary @$DEMO_HOME/example/order-payload.json $KNATIVE_ROUTE
-----
-+
-. Point out that the service spins up and puts something in the payment queue.  But our order is still unprocessed
 
 == Create Event Source ==
 
@@ -174,22 +144,7 @@ To best demonstrate what is happening, make sure windows are setup with Topology
 image:scaling-desktop-setup.png[]
 
 
-=== Using `hey` ===
-
-Hey (or any tool that can generate http request concurrently) is the most accurate way to demonstrate scaling.  If you have 1 request per pod and you make 100 hey calls, you generally get 100 pods scaled up.  This is not generally true of the kafka queue approach due to the additional complexity of latency around posting messages to a topic and having these generate HTTP requests to the "sink" service
-
-. Run this command to simulate orders coming in from coolstore
-+
-----
-hey -n 100 -c 100 -m POST -D $DEMO_HOME/example/order-payload.json -T "application/json" $(oc get rt payment -n dev-demo-dev -o jsonpath='{.status.url}')
-----
-+
-. Notice that close to 100 pods spin up
-. Review `hey` report
-+
-image:hey-report.png[]
-
-=== Using `kafka-spammer` ===
+Because our service is so fast we need simulate entries coming in all at once, hence we'll use a tool called `kafka-spammer` to put (bogus) messages on the topic concurrently and see how our pods scale
 
 [NOTE]
 .Alternative
@@ -225,14 +180,13 @@ KAFKA_SPAMMER_POD=$(oc -n ${PROJECT_PREFIX}-support get pod -l "run=kafka-spamme
 oc -n ${PROJECT_PREFIX}-support exec -it $KAFKA_SPAMMER_POD -- /bin/sh
 ----
 . Once on the pod, you can `curl` localhost using a path input that defines the number of concurrent requests you want to post to the topic.
-** NOTE: Keep requests to 10 or lower and pods should scale as expected given the concurrently limits set on the knative service.  Much more than this and other factors (speed of processing, vicissitudes of kafka and eventing) cause fewer than expected pods to spin up
+** NOTE: Keep requests to 50 or lower and pods should scale as expected given the concurrently limits set on the knative service.  Much more than this and other factors (speed of processing, vicissitudes of kafka and eventing) cause fewer than expected pods to spin up
 +
 ----
-NUM_REQUESTS=10
-# send 10 concurrent posts to the order topic
+NUM_REQUESTS=50
+# send 50 concurrent posts to the order topic
 curl localhost:8080/${NUM_REQUESTS}
 ----
-
 
 == Create Tekton Pipeline with Builder ==
 
@@ -260,6 +214,7 @@ oc tag -n dev-demo-stage --reference-policy=local dev-demo-dev/payment:latest de
 . Then hit the plus to the right of the oc task
 . Select the `kn-service` ClusterTask and fill in the args accordingly in the image below
 ** For ease of pasting, the environmental arg is *with no quotes*
+** [red]#Because of a bug in this version of pipeline builder, you must set a value for array arguments, if you don't a '' will get sent through and they deploy will fail#
 +
 ----
 mp.messaging.outgoing.payments.bootstrap.servers=my-cluster-kafka-bootstrap.dev-demo-support:9092
@@ -276,24 +231,11 @@ image:pipeline-builder-kn-service.png[]
 image-registry.openshift-image-registry.svc:5000/dev-demo-stage/payment-stage
 ----
 +
-+
 image:oc-start-pipeline-ui.png[]
 +
 . Click the "Logs" tab to watch it run
-. The pipeline fail (this is due to the service account not having the proper permissions) and you will see this error in the logs
-+
-image:oc-error.png[]
-+
-. From a shell, run the following commands to update the permissions for the pipeline account
-+
-----
-oc adm policy add-cluster-role-to-user -n dev-demo-stage kn-deployer system:serviceaccount:dev-demo-dev:pipeline
-----
-+
-. And rerun the pipeline by going to Actions > Rerun
-+
+
 . It should complete this time.  When the logs indicate it has finished, go to the Developer Perspective of the dev-demo-stage
-+
 . Click on the payment-service and get the route that was created and paste it into value `KN_ROUTE`
 . Then run this command to call the route (whilst watching payment queue from before)
 +
@@ -314,7 +256,7 @@ We actually have this service setup on a local git repo.  This git repo triggers
 kn service update payment --annotation "app.openshift.io/vcs-ref=master" --annotation "app.openshift.io/vcs-uri=https://github.com/hatmarch/coolstore.git" --revision-name "{{.Service}}-{{.Generation}}" -n dev-demo-dev
 ----
 . If the command was successful, a badge should now appear indicating that the service is recognized as one that can be edited with CRW
-** NOTE: This would normally come in when using S2I (git repo) but this functionality isn't currently exposed for knative services in the UI
+** [blue]#This would normally come in when using S2I (git repo) but this functionality isn't currently exposed for knative services in the UI#
 +
 image:crw-badge.png[]
 +
@@ -519,3 +461,69 @@ oc port-forward svc/image-registry -n openshift-image-registry 5000:5000
 skopeo copy --src-creds "$(oc whoami):$(oc whoami -t)" --src-tls-verify=false --dest-creds "${USER}:${PASSWORD}" docker://localhost:5000/${PROJECT}/payment:latest docker://{IMAGE_DEST}
 ----
 
+=== Cut Parts of Demonstration
+
+==== URL Invocation ====
+
+In this section we want to show that the route created for the payment service allows us to invoke the payment service directly
+
+. Go to the dev-demo-dev project
+. Go to developer perspective
+. Set Application to "Focus"
+. Show the payment knative Service and zoom in on this in the browser window
+. Setup Windows for Next Demonstration
+** Split the browser window to have developer perspective on top and coolstore on bottom
+** Open another shell from which you'll send the curl request
+** Windows should look something like this:
++
+image:window-setup-invoke.png[]
++
+. Have that shown in the window
+. Highlight (and copy) the route that is shown in the knative service
+. In the bottom shell, set the `KNATIVE_ROUTE` variable
++
+----
+KNATIVE_ROUTE=<pasted value>
+----
++
+. Next invoke this command from the shell
++
+----
+curl -i -H 'Content-Type: application/json' -X POST --data-binary @$DEMO_HOME/example/order-payload.json $KNATIVE_ROUTE
+----
++
+. Point out that the service spins up and puts something in the payment queue.  But our order is still unprocessed
+
+==== Scaling Support ====
+
+===== Using `hey` =====
+
+Hey (or any tool that can generate http request concurrently) is the most accurate way to demonstrate scaling.  If you have 1 request per pod and you make 100 hey calls, you generally get 100 pods scaled up.  This is not generally true of the kafka queue approach due to the additional complexity of latency around posting messages to a topic and having these generate HTTP requests to the "sink" service
+
+. Run this command to simulate orders coming in from coolstore
++
+----
+hey -n 100 -c 100 -m POST -D $DEMO_HOME/example/order-payload.json -T "application/json" $(oc get rt payment -n dev-demo-dev -o jsonpath='{.status.url}')
+----
++
+. Notice that close to 100 pods spin up
+. Review `hey` report
++
+image:hey-report.png[]
+
+==== Tekton Pipeline UI ====
+
+_this was from the middle part when we'd show off retry due to a configuration error_
+
+. The pipeline fail (this is due to the service account not having the proper permissions) and you will see this error in the logs
++
+image:oc-error.png[]
++
+. From a shell, run the following commands to update the permissions for the pipeline account
++
+----
+oc adm policy add-cluster-role-to-user -n dev-demo-stage kn-deployer system:serviceaccount:dev-demo-dev:pipeline
+----
++
+. And rerun the pipeline by going to Actions > Rerun
++
