@@ -36,7 +36,7 @@ spec:
           gogs_user = "$(inputs.params.GOGS_USER)"
           gogs_pwd = "$(inputs.params.GOGS_PASSWORD)"
           # FIXME: Webhook url could be the name of the svc with the port at the end
-          # webhookURL = "http://" + os.popen('oc get route webhook -o template --template="{{.spec.host}}"').read()
+          webhookURL = "http://" + os.popen('oc get route webhook -o template --template="{{.spec.host}}"').read()
           gogsURL = "http://" + os.popen('oc get svc gogs -o template --template="{{.spec.clusterIP}}"').read() + ":3000"
 
           # create admin user
@@ -66,17 +66,17 @@ spec:
           else:
             print("Created git repo coolstore")
 
-          # configure webhook
-          # data_webhook = '{"type": "gogs", "config": { "url": "' + webhookURL + '", "content_type": "json"}, "events": ["push"], "active": true}'
-          # headers = {'Content-Type': 'application/json'}
-          # resp = requests.post(url = gogsURL + "/api/v1/repos/" + gogs_user + "/coolstore/hooks", 
-          #                     headers = headers, 
-          #                     auth = (gogs_user, gogs_pwd), 
-          #                     data = data_webhook) 
+          configure webhook
+          data_webhook = '{"type": "gogs", "config": { "url": "' + webhookURL + '", "content_type": "json"}, "events": ["push"], "active": true}'
+          headers = {'Content-Type': 'application/json'}
+          resp = requests.post(url = gogsURL + "/api/v1/repos/" + gogs_user + "/coolstore/hooks", 
+                              headers = headers, 
+                              auth = (gogs_user, gogs_pwd), 
+                              data = data_webhook) 
 
-          # if resp.status_code != 200 and resp.status_code != 201:
-          #   print("Error configuring the webhook (status code: {})".format(resp.status_code))
-          #   print(resp.content)
-          # else:
-          #   print("Configured webhook: " + webhookURL)
+          if resp.status_code != 200 and resp.status_code != 201:
+            print("Error configuring the webhook (status code: {})".format(resp.status_code))
+            print(resp.content)
+          else:
+            print("Configured webhook: " + webhookURL)
 

@@ -13,8 +13,3 @@ spec:
     value: $(header.Content-Type)
   - name: message
     value: $(body.commits[0].message)
-  # FIXME: For now assume all triggers from gogs are triggering the build of this notebook
-  - name: notebooktobuild
-    value: "frauddetection.ipynb"
-  - name: notebookrelativepath
-    value: "notebook"
