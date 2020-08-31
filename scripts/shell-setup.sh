@@ -14,8 +14,10 @@ if [[ -z "${SCRIPT}" ]]; then
 fi
 
 export DEMO_HOME=$( cd "$(dirname "${SCRIPT}")/.." ; pwd -P )
+export PROJECT_PREFIX=${1:-dev-demo}
 
 echo "DEMO_HOME set to $DEMO_HOME"
+echo "PROJECT_PREFIX is $PROJECT_PREFIX"
 
 alias cpr='tkn pr cancel $(tkn pr list -o name --limit 1 | cut -f 2 -d "/")'
 alias ctr='tkn tr cancel $(tkn tr list -o name --limit 1 | cut -f 2 -d "/")'
