@@ -16,10 +16,33 @@ image:coolstore-arch.png[]
 
 == Setup Tips Prior to Walkthrough ==
 
-. Open CodeReadyWorkspaces with the devfile to ensure it is initialized at least once
-
+* Open CodeReadyWorkspaces with the devfile to ensure it is initialized at least once
+* VSCode in the Desktop to the right of the main demo desktop
+* Setup your windows something like this:
++
+image:scaling-desktop-setup.png[]
++
+* For every shell referenced run the following commands
+.. Go to the root of the `developer-demo` directory on your local machine
+.. Run the following docker command
++
+----
+docker run -it -v ~/.kube:/home/jboss/.kube -v ~/.oh-my-zsh:/home/jboss/.oh-my-zsh -v $(pwd):/workspaces/developer-demo quay.io/mhildenb/dev-demo-shell /bin/zsh
+----
++
+.. Then run the following command to setup your environment
++
+----
+cd /workspaces/developer-demo
+. scripts/shell-setup.sh
+----
 
 == Coolstore Introduction
+
+[NOTE]
+****
+NOTE: [red]#Hide any "share screen" notification before running through the demo#
+****
 
 . Start with `$PROJECT_PREFIX`-dev project, which should have the Red Hat Coolstore setup minus the payment service
 . It will currently have two services failing, this will be due to a kafka cluster not having been deployed
@@ -49,64 +72,29 @@ image:create-kafka.png[]
 +
 image:kafka-form.png[]
 +
-. You will be returned to the Kakfas list.  Select the new "my-cluster" entry, then select "Resources" and scroll through the list
+. Instead of filling out through the form, just use the YAML view
+** [blue]#Mention that there are link:https://kafka.apache.org/documentation/[tons of different configuration options for kafka] and they are no all listed in the UI#
+. Add the following under the `spec:kafka:config` to ensure maximum scaling [red]#_(for later in the demo)_#
++
+----
+    num.partitions: 100
+----
++
+. You will be returned to the Kakfas list.  Select the new "my-cluster" entry, then select YAML as there is a customization we need to add that isn't available in the UI
+. Then select "Resources" and scroll through the list
 +
 image:kafka-resources.png[]
 +
-. While we're waiting for the creation of the cluster to complete, add 2 topics, one for `orders` and one for `payments`
-** scroll right to go to the Kafka Topic
-** Be sure to set partitions to `100`
-+
-image:kafka-topic-payments.png[]
-+
-. Go back to the details and scroll down to conditions and you will see the appropriate message regarding the state of the cluster
-+
-. Finally, switch to the Developer Perspective of that project to show the kafka resources spinning up
+. *Whilst waiting for the cluster to come up:*
+. Go back to the main Operator page and point out that there are other Kafka resources that can be created via custom resources, such as `Topic`s
+. [blue]#Mention that the AMQStreams operator acts to create custom resources for any topics that are created programmatically and that it is also possible to create topics using custom resources#
+** If you want to demonstrate the creation of topics from a CR, see <<Creating Topics in the UI, here>>
 
-== Create Payment Service ==
+NOTE: whilst you're waiting for the Kafka cluster to come up, you can start to move on to the next section
 
-. Create Service: Developer Perspective: Add knative payment service
-.. Click Add, select image
-.. Image is: `quay.io/mhildenb/coolstore-payment-java:latest`
-.. Select knative service
-.. Name the service `payment`
-.. Customize Scaling
-*** Target and Max concurrency to 1
-.. Customize Deployment
-*** Env: `mp.messaging.outgoing.payments.bootstrap.servers=my-cluster-kafka-bootstrap.dev-demo-support:9092`
-+
-image:payment-env.png[]
-+
-*** Label: `app.kubernetes.io/part-of=focus`
-. Go back to the Coolstore site and buy something
-. Go to the orders screen and show that the order is not processed
-
-== Kafka Context and Topic Watch ==
-
-[IMPORTANT]
-.Shell setup
-====
-Every shell referenced should be run inside a docker container that has all the necessary commands for the demo.  here's what you do
-
-. Go to the root of the `developer-demo` directory on your local machine
-. Run the following docker command
-+
-----
-docker run -it -v ~/.kube:/home/jboss/.kube -v ~/.oh-my-zsh:/home/jboss/.oh-my-zsh -v $(pwd):/workspaces/developer-demo quay.io/mhildenb/dev-demo-shell /bin/zsh
-----
-+
-. Then run the following command to setup your environment
-+
-----
-cd /workspaces/developer-demo
-. scripts/shell-setup.sh
-----
-====
+== Revisit the Coolstore ==
 
 . Go to the `dev-demo-dev` project and show the coolstore app in the "Topology View" of the "Developer Perspective"
-. Setup the following options on the developer perspective:
-** Display Options > Check the `Pod Count` box
-** Application > Select `Focus` to show only the services relevant to the coolstore
 . Launch the coolstore from the badge on the coolstore service on the dev perspective
 ** Can use this to contextualize with the above diagram (or from these slides link:https://docs.google.com/presentation/d/1XtvEx9cMRqrlMcY_EdiIsBR78WJawoSfXvFiyt66pS4/edit#slide=id.g72cacdd2b4_0_120[here])
 
@@ -121,9 +109,36 @@ oc exec -c kafka my-cluster-kafka-0 -n dev-demo-support -- /opt/kafka/bin/kafka-
 ----
 oc exec -c kafka my-cluster-kafka-0 -n dev-demo-support -- /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic payments
 ----
+. Pick and item and purchase it
+. Point out that only the orders queue changes
+. Show the orders in the website and that our order has not yet been processed
 
+== Create Payment Service ==
+
+Next we'll create our knative payment service that will take our orders and process them.
+
+. Create Service: Developer Perspective: Add knative payment service
+.. Click Add, select image
+.. Image is: `quay.io/mhildenb/coolstore-payment-java:latest`
+.. Select knative service
+.. Name the service `payment`
+.. Customize Scaling
+*** Target and Max concurrency to 1
+.. Customize Deployment
+*** Environment: 
+**** *Name*: `mp.messaging.outgoing.payments.bootstrap.servers`
+**** *Value*: `my-cluster-kafka-bootstrap.dev-demo-support:9092` [red]#_or use config map for value, see below_#
++
+image:payment-env.png[]
++
+*** Label: `app.kubernetes.io/part-of=focus`
++
+
+_OPTIONAL_: Show that the payment service can now be invoked via URL
 
 == Create Event Source ==
+
+Next we need to wire the payment service to an event source, in our case the `orders` topic
 
 . From the topology view, go the the knative payment service
 . From the payment service on the topology view, pull out blue arrow
@@ -135,30 +150,21 @@ image:kafka-source.png[]
 . Show the service starting up from the topology view
 . Refresh the order details page on coolstore.  Order should now be processed
 
+. Go back to the Coolstore site and buy something
+. Point out that only the orders queue changes AS WELL AS payments queue
+. Show the orders in the website and that our most recent order has been processed
+
 == Scaling Support ==
 
-Let's innundate the payment service with calls to see how it responds to the concurrency targets we set
+Let's innundate the payment service with calls to see how it responds to the concurrency targets we set.  For the fastest services out there (such as quarkus native compilations) you are probably best off using the kafka spammer.  In a shell run the following commands to effectively download the spammer into the project and then rsh into it
 
-To best demonstrate what is happening, make sure windows are setup with Topology View prominent and two shells:
+[blue]#EXPLAIN: Because our service is so fast we need simulate entries coming in all at once, hence we'll use a tool called `kafka-spammer` to put (bogus) messages on the topic concurrently and see how our pods scale#
 
-image:scaling-desktop-setup.png[]
-
-
-Because our service is so fast we need simulate entries coming in all at once, hence we'll use a tool called `kafka-spammer` to put (bogus) messages on the topic concurrently and see how our pods scale
-
-[NOTE]
-.Alternative
-====
-You can attempt to cat lines to the order payload topic (but this might prove to be too slow) using this command
-
-----
-oc exec -i -c kafka my-cluster-kafka-0 -n dev-demo-support -- /opt/kafka/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic orders
-----
-====
-
-For the fastest services out there (such as quarkus native compilations) you are probably best off using the kafka spammer.  In a shell run the following commands to effectively download the spammer into the project and then rsh into it
-
-. First show how whenever we put something on the order topic it spins up the service (do this from the third window)
+. Go to the `dev-demo-dev` project and show the coolstore app in the "Topology View" of the "Developer Perspective"
+. Setup the following options on the developer perspective:
+** Display Options > Check the `Pod Count` box
+** Application > Select `Focus` to show only the services relevant to the coolstore
+. First show how whenever we put something on the order topic it spins up the service (do this from the third [blue] shell)
 +
 ----
 oc exec -it -c kafka my-cluster-kafka-0 -n ${PROJECT_PREFIX}-support -- /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic orders
@@ -188,6 +194,13 @@ NUM_REQUESTS=50
 curl localhost:8080/${NUM_REQUESTS}
 ----
 
+[IMPORTANT]
+.If Running a Live Demo
+****
+[red]#Jump to the first few steps of <<Edit Payment Service (Code Ready Workspaces),this section>> to start the creation of the CodeReady Workspace.  The workspace can take some time to complete, so whilst it's building, you can <<Create Tekton Pipeline with Builder,Create the Tekton Pipeline>> in parallel.#
+****
+
+
 == Create Tekton Pipeline with Builder ==
 
 NOTE: These instructions assume a `PROJECT_PREFIX` of `dev-demo`
@@ -214,7 +227,7 @@ oc tag -n dev-demo-stage --reference-policy=local dev-demo-dev/payment:latest de
 . Then hit the plus to the right of the oc task
 . Select the `kn-service` ClusterTask and fill in the args accordingly in the image below
 ** For ease of pasting, the environmental arg is *with no quotes*
-** [red]#Because of a bug in this version of pipeline builder, you must set a value for array arguments, if you don't a '' will get sent through and they deploy will fail#
+** [red]#Because of a bug in this version of pipeline builder, you must set a value for array arguments, if you don't a `''` will get sent through and they deploy will fail#
 +
 ----
 mp.messaging.outgoing.payments.bootstrap.servers=my-cluster-kafka-bootstrap.dev-demo-support:9092
@@ -234,7 +247,6 @@ image-registry.openshift-image-registry.svc:5000/dev-demo-stage/payment-stage
 image:oc-start-pipeline-ui.png[]
 +
 . Click the "Logs" tab to watch it run
-
 . It should complete this time.  When the logs indicate it has finished, go to the Developer Perspective of the dev-demo-stage
 . Click on the payment-service and get the route that was created and paste it into value `KN_ROUTE`
 . Then run this command to call the route (whilst watching payment queue from before)
@@ -263,11 +275,54 @@ image:crw-badge.png[]
 . Click on the badge and CRW should start loading (possibly after you login and create a CRW with your OCP credentials)
 . In the meantime, in a new tab, navigate to the url in the annotation uri and show the devfile
 ** scroll through the devfile to explain at a high level the contents
++
+[IMPORTANT]
+.If running a live demo
+****
+[red]#Whilst you wait for the development environment to spin up, you can go back and <<Create Tekton Pipeline with Builder,Create the Tekton Pipeline>>.  By the time that section is demonstrated the build should be complete#
+****
++
 . Go back to the CRW tab
-
-[red]#TODO: Finish this section#
-
++
 image:crw-payment-service.png[]
++
+. kbd:[CMD+P] and `PaymentResource` to open that file quickly
+. Edit the file
+** Add to SUCCESS and FAILURE messages a `(CRW Build)`
+. Seed the m2 cache (select command from the right)
++
+image:crw-seed-cache.png[]
++
+. Select `Start Quarkus in Dev Mode`
++
+. Wait for compilation to finish
++
+. Set a breakpoint at the top of the "HandleCloudEvent" method
+. Go to the debug pane
+. Click on the green play button
+. Click `quarkus-development-server` on the right
+** This should open a separate tab that gives the default / page
+. Copy the URL of the tab to `CRW_ROUTE`
+. From the blue shell, run the following command
++
+----
+curl -X POST -H "Content-Type: application/json" -d @$DEMO_HOME/example/order-payload.json $CRW_ROUTE
+----
++ 
+. Go back to the CRW tab and see that it's waiting in the debugger
+
+== Trigger Pipeline from CRW
+
+. Go to the git panel
+. Select files for checkin
+. Add message and checkin
+. Push to master and login
+** gogs
+** gogs
+. Open the Pipelines drawer of the dev-demo-cicd project
+. Go to pipeline runs
+
+
 
 == TODO
 Now let's say we want to change our payment service.  We could do this from s2i, but let's look at how we can quickly create a tekton pipeline to build our service from a git repo we have locally.  When our pipeline is complete it will look like this:
@@ -306,6 +361,28 @@ This is untested.  Not sure if CRW badge works with knative services
 
 == Troubleshooting ==
 
+=== Event Source:
+
+If the Developer Perspective doesn't let you create an Event source by giving you a screen with this error:
+----
+Creation of event sources are not currently supported on this cluster
+----
+image:event-sources-error.png[]
+
+Assuming that all the necessary operators and CRs are installed, you can force the system to update itself like this:
+
+. Create a knative service (such as payment)
+. Create a kafka event source via yaml file, like this:
+** NOTE: You may need to edit the bootstrap server for your demo (e.g. add the .dev-demo-support subdomain to the service)
++
+----
+oc apply -f $DEMO_HOME/coolstore/payment-service/knative/kafka-event-source.yaml
+----
++
+. Delete the event source
+
+You should now be able to create event sources in the UI again.  If you see the error again you [red]#there might be some caching at play and you may need to REFRESH the page or otherwise invalidate the cache#
+
 === 500 errors
 
 You may notice 500 errors, particularly if you send multiple requests under load:
@@ -335,7 +412,7 @@ You cannot connect to the mongodb instance using the latest plain adminer contai
 . Start port forwarding to the mongodb service
 +
 ----
-oc port-forward -n coolstore svc/order-database 27017:27017
+oc port-forward -n dev-demo-dev svc/order-database 27017:27017
 ----
 +
 . Run the modified adminer pod
@@ -355,6 +432,8 @@ image:adminer-mongo-edit.png[]
 
 ==== Updating your own Adminer image
 
+NOTE: It's possible to just install the mongodb elements to adminer:4.6.2 image as v4.6.2 is the last version of adminer that allows logging into a database without a user and a password
+
 There are two reasons why the normal adminer image cannot connect to the mongo database:
 
 1. It requires a newer version of php integration with MongoDB
@@ -372,6 +451,7 @@ docker run -it -u root --name my_adminer adminer:latest sh
 . Then from inside the container run
 +
 ----
+apk update
 apk add autoconf gcc g++ make libffi-dev openssl-dev
 pecl install mongodb
 echo "extension=mongodb.so" > /usr/local/etc/php/conf.d/docker-php-ext-mongodb.ini
@@ -425,6 +505,18 @@ openssl s_client -showcerts -connect localhost:5001 </dev/null 2>/dev/null|opens
 ----
 
 == Appendix
+
+=== Creating Topics in the UI ===
+
+. While we're waiting for the creation of the cluster to complete, add 2 topics, one for `orders` and one for `payments`
+** scroll right to go to the Kafka Topic
+** Be sure to set partitions to `100`
++
+image:kafka-topic-payments.png[]
++
+. Go back to the details and scroll down to conditions and you will see the appropriate message regarding the state of the cluster
++
+. Finally, switch to the Developer Perspective of that project to show the kafka resources spinning up
 
 === Copying OpenShift images to public repositories
 
