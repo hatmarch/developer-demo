@@ -109,16 +109,16 @@ main() {
 
         echo "Uninstalling knative serving"
         oc delete knativeservings.operator.knative.dev knative-serving -n knative-serving || true
-        oc delete namespace knative-serving || true
-
-        remove-operator "serverless-operator" || true
-
-        echo "Removing Serverless Operator related CRDs"
-        remove-crds "knative.dev" || true
+        # note, it takes a while to remove the namespace.  Move on to other things before we wait for the removal
+        # of this project below
+        oc delete namespace knative-serving --wait=false || true
 
         remove-operator "knative-kafka-operator" || true
 
         remove-operator "amq-streams" || true
+
+        echo "Removing Serverless Operator related CRDs"
+        remove-crds "knative.dev" || true
 
         remove-crds "kafka.strimzi.io" || true
 
@@ -127,6 +127,10 @@ main() {
         remove-operator "codeready-workspaces" || true
 
         remove-crds "checlusters.org.eclipse.che" || true
+
+        # actually wait for knative-serving to finish being deleted before we remove the operator
+        oc delete namespace knative-serving || true
+        remove-operator "serverless-operator" || true
     fi
 
     oc delete project codeready || true
