@@ -20,7 +20,6 @@ objects:
   kind: Kafka
   metadata:
     name: my-cluster
-    namespace: user1-cloudnativeapps
   spec:
     kafka:
       version: 2.5.0
@@ -33,6 +32,7 @@ objects:
           authentiation:
             type: tls
       config:
+        num.partitions: 100
         offsets.topic.replication.factor: ${{REPLICA_COUNT}}
         transaction.state.log.replication.factor: ${{REPLICA_COUNT}}
         transaction.state.log.min.isr: ${{MIN_ISR}}
