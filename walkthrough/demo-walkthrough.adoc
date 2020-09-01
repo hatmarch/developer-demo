@@ -49,6 +49,8 @@ NOTE: [red]#Hide any "share screen" notification before running through the demo
 
 == Operators and Creation of Kafka Cluster ==
 
+=== Cluster Creation ===
+
 . Start with operators are installed on the cluster, such as those that are key to the demonstration.  This include:
 * Serverless Operator
 * Pipelines Operator
@@ -61,14 +63,8 @@ NOTE: [red]#Hide any "share screen" notification before running through the demo
 image:create-kafka.png[]
 +
 . Show the UI form for creation
-** Mention the YAML view
-** set name to `my-cluster`
-** Show some of the things that can be configured in Kafka Brokers such as number of zookeepers desired
-*** perhaps set this to `1`
-. [blue]#Mention that the YAML option is key as ACM could install both the operator and the CR yaml that automatically deploys a kafka cluster of the appropriate size#
-*** Kafka configuration option 'offsets.topic.replication.factor' should be set to 1 because 'spec.kafka.replicas' is 1
-*** Kafka configuration option `transaction.state.log.replication.factor` should be set to 1 because 'spec.kafka.replicas' is 1
-** Accept all other default values
+** Show brokers
+** Show zookeeper options
 +
 image:kafka-form.png[]
 +
@@ -86,13 +82,13 @@ image:kafka-form.png[]
 image:kafka-resources.png[]
 +
 . *Whilst waiting for the cluster to come up:*
-. Go back to the main Operator page and point out that there are other Kafka resources that can be created via custom resources, such as `Topic`s
+. Go back to the main Operator page and point out that there are other Kafka resources that can be created via custom resources, such as `Topic` s
 . [blue]#Mention that the AMQStreams operator acts to create custom resources for any topics that are created programmatically and that it is also possible to create topics using custom resources#
 ** If you want to demonstrate the creation of topics from a CR, see <<Creating Topics in the UI, here>>
 
 NOTE: whilst you're waiting for the Kafka cluster to come up, you can start to move on to the next section
 
-== Revisit the Coolstore ==
+=== Revisit the Coolstore (with Kafka queue) ===
 
 . Go to the `dev-demo-dev` project and show the coolstore app in the "Topology View" of the "Developer Perspective"
 . Launch the coolstore from the badge on the coolstore service on the dev perspective
@@ -109,11 +105,22 @@ oc exec -c kafka my-cluster-kafka-0 -n dev-demo-support -- /opt/kafka/bin/kafka-
 ----
 oc exec -c kafka my-cluster-kafka-0 -n dev-demo-support -- /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic payments
 ----
-. Pick and item and purchase it
-. Point out that only the orders queue changes
++
+[IMPORTANT]
+****
+NOTE: Before moving on to next step, you need to ensure the order and cart service are running at this point before actually purchasing.
+
+You can run this command to see if the topics have been created appropriately:
+----
+oc get kt -n dev-demo-support -w
+----
+****
++
+. Pick any item and purchase it
+. Point out that only the `orders` queue changes
 . Show the orders in the website and that our order has not yet been processed
 
-== Create Payment Service ==
+== Knative Serving: Create Payment Service ==
 
 Next we'll create our knative payment service that will take our orders and process them.
 
@@ -136,7 +143,7 @@ image:payment-env.png[]
 
 _OPTIONAL_: Show that the payment service can now be invoked via URL
 
-== Create Event Source ==
+== Knative Eventing: Create Event Source ==
 
 Next we need to wire the payment service to an event source, in our case the `orders` topic
 
@@ -154,7 +161,7 @@ image:kafka-source.png[]
 . Point out that only the orders queue changes AS WELL AS payments queue
 . Show the orders in the website and that our most recent order has been processed
 
-== Scaling Support ==
+== Serverless: Scaling Support ==
 
 Let's innundate the payment service with calls to see how it responds to the concurrency targets we set.  For the fastest services out there (such as quarkus native compilations) you are probably best off using the kafka spammer.  In a shell run the following commands to effectively download the spammer into the project and then rsh into it
 
@@ -179,6 +186,11 @@ oc -n ${PROJECT_PREFIX}-support run kafka-spammer --image=quay.io/rhdevelopers/k
 ----
 +
 . Wait for the spammer to be ready
++
+----
+oc get pods -n dev-demo-support -w
+----
++
 . Run the following to find the pod and effectively rsh into it:
 +
 ----
@@ -197,9 +209,39 @@ curl localhost:8080/${NUM_REQUESTS}
 [IMPORTANT]
 .If Running a Live Demo
 ****
-[red]#Jump to the first few steps of <<Edit Payment Service (Code Ready Workspaces),this section>> to start the creation of the CodeReady Workspace.  The workspace can take some time to complete, so whilst it's building, you can <<Create Tekton Pipeline with Builder,Create the Tekton Pipeline>> in parallel.#
+[red]#Jump to the first few steps of <<Inner Loop: Intro to CodeReady Workspaces,this section>> to start the creation of the CodeReady Workspace.  The workspace can take some time to complete, so whilst it's building, you can <<Create Tekton Pipeline with Builder,Create the Tekton Pipeline>> in parallel.#
 ****
 
+== Inner Loop: Intro to CodeReady Workspaces ==
+
+We actually have this service setup on a local git repo.  This git repo triggers a pipeline that we have created in the cicd project.  To tell openshift about this, we need to update our payment service with some annotations
+
+. First, go to the codeready project and show the installed operator
+** could make up a conceit that this is from CRW
+. Then navigate back to the Developer Perspective and center in on the payment service
+. Run the following command in the shell
+** NOTE: The uri is referencing an https endpoint as that is the only way CRW recognizes devfiles
+----
+kn service update payment --annotation "app.openshift.io/vcs-ref=master" --annotation "app.openshift.io/vcs-uri=https://github.com/hatmarch/coolstore.git" --revision-name "{{.Service}}-{{.Generation}}" -n dev-demo-dev
+----
+. If the command was successful, a badge should now appear indicating that the service is recognized as one that can be edited with CRW
+** [blue]#This would normally come in when using S2I (git repo) but this functionality isn't currently exposed for knative services in the UI#
++
+image:crw-badge.png[]
++
+. Click on the badge and CRW should start loading (possibly after you login and create a CRW with your OCP credentials)
+. In the meantime, in a new tab, navigate to the url in the annotation uri and show the devfile
+** scroll through the devfile to explain at a high level the contents
++
+. Log into CodeReady Workspaces
+** includes giving name and email
+. You will now be presented the building screen.  This will take a few minutes
+
+[IMPORTANT]
+.If running a live demo
+****
+[red]#Whilst you wait for the development environment to spin up, you can go back and <<Create Tekton Pipeline with Builder,Create the Tekton Pipeline>>.  By the time that section is demonstrated the build should be complete#
+****
 
 == Create Tekton Pipeline with Builder ==
 
@@ -255,108 +297,34 @@ image:oc-start-pipeline-ui.png[]
 hey -n 100 -c 100 -m POST -D $DEMO_HOME/example/order-payload.json -T "application/json" $KN_ROUTE
 ----
 
-== Edit Payment Service (Code Ready Workspaces) ==
+== Inner Loop to Outer Loop: Trigger Pipeline from CRW
 
-We actually have this service setup on a local git repo.  This git repo triggers a pipeline that we have created in the cicd project.  To tell openshift about this, we need to update our payment service with some annotations
-
-. First, go to the codeready project and show the installed operator
-** could make up a conceit that this is from CRW
-. Then navigate back to the Developer Perspective and center in on the payment service
-. Run the following command in the shell
-** NOTE: The uri is referencing an https endpoint as that is the only way CRW recognizes devfiles
-----
-kn service update payment --annotation "app.openshift.io/vcs-ref=master" --annotation "app.openshift.io/vcs-uri=https://github.com/hatmarch/coolstore.git" --revision-name "{{.Service}}-{{.Generation}}" -n dev-demo-dev
-----
-. If the command was successful, a badge should now appear indicating that the service is recognized as one that can be edited with CRW
-** [blue]#This would normally come in when using S2I (git repo) but this functionality isn't currently exposed for knative services in the UI#
-+
-image:crw-badge.png[]
-+
-. Click on the badge and CRW should start loading (possibly after you login and create a CRW with your OCP credentials)
-. In the meantime, in a new tab, navigate to the url in the annotation uri and show the devfile
-** scroll through the devfile to explain at a high level the contents
-+
-[IMPORTANT]
-.If running a live demo
-****
-[red]#Whilst you wait for the development environment to spin up, you can go back and <<Create Tekton Pipeline with Builder,Create the Tekton Pipeline>>.  By the time that section is demonstrated the build should be complete#
-****
-+
-. Go back to the CRW tab
-+
-image:crw-payment-service.png[]
-+
 . kbd:[CMD+P] and `PaymentResource` to open that file quickly
 . Edit the file
 ** Add to SUCCESS and FAILURE messages a `(CRW Build)`
-. Seed the m2 cache (select command from the right)
-+
-image:crw-seed-cache.png[]
-+
-. Select `Start Quarkus in Dev Mode`
-+
-. Wait for compilation to finish
-+
-. Set a breakpoint at the top of the "HandleCloudEvent" method
-. Go to the debug pane
-. Click on the green play button
-. Click `quarkus-development-server` on the right
-** This should open a separate tab that gives the default / page
-. Copy the URL of the tab to `CRW_ROUTE`
-. From the blue shell, run the following command
-+
-----
-curl -X POST -H "Content-Type: application/json" -d @$DEMO_HOME/example/order-payload.json $CRW_ROUTE
-----
-+ 
-. Go back to the CRW tab and see that it's waiting in the debugger
-
-== Trigger Pipeline from CRW
-
 . Go to the git panel
 . Select files for checkin
 . Add message and checkin
 . Push to master and login
 ** gogs
 ** gogs
-. Open the Pipelines drawer of the dev-demo-cicd project
+. Open the Pipelines drawer of the `dev-demo-cicd` project
 . Go to pipeline runs
-
-
-
-== TODO
-Now let's say we want to change our payment service.  We could do this from s2i, but let's look at how we can quickly create a tekton pipeline to build our service from a git repo we have locally.  When our pipeline is complete it will look like this:
-
-image:pipeline-completed.png[]
-
-Let's create a pipeline that builds our knative pipeline service using the OpenShift Pipelines builder
-
-
-. Run the pipeline and when the UI form shows up, fill in the fields as seen in this image:
+. Show the pipeline in progress
+. When the pipeline completes, prove that the payment service has been updated either by:
+.. Purchasing something in the coolstore and looking at the payment queue
+.. Setting `KN_ROUTE` to the payment service route and invoking with this command:
 +
-image:start-pipeline-params.png[]
-+
-. You will be routed to the pipeline run UI, notice the animation
-. Click on the logs tab and show the logging of the build
-. [red]#NOTE: logs for the build image step don't show in the UI until the very end.  Might need to show it in the console#
-The installation script creates a payment pipeline.  Might use pipeline builder to refine this pipeline
-** Currently some tasks take in a lot of parameters; might be better to wrap clustertasks for easy setup 
+----
+curl -X POST -H "Content-Type: application/json" -d @$DEMO_HOME/example/order-payload.json $KN_ROUTE
+----
 
-Setup a trigger to the gogs repo (for payment editing)
+[IMPORTANT]
+.If running a live demo
+****
+[red]#If time allows, you can show more features of CodeReady Workspaces by clicking <<Extended CRW,here>>.#
+****
 
-== Edit payment service ==
-
-[NOTE]
-====
-This is untested.  Not sure if CRW badge works with knative services
-====
-
-. Click CRW badge on payment service
-. Checkout from local gogs repo
-
-. If CRW can't be made to work, or there isn't enough time, can just edit the file from gogs (`PaymentResource`) to change the text that is logged when "payment is processed" and then checkin to trigger the tekton pipeline
-. Pipeline will update the revision
-. Reorder something from coolstore and see the new message
 
 
 == Troubleshooting ==
@@ -585,6 +553,38 @@ curl -i -H 'Content-Type: application/json' -X POST --data-binary @$DEMO_HOME/ex
 ----
 +
 . Point out that the service spins up and puts something in the payment queue.  But our order is still unprocessed
+
+==== Extended CRW ====
+
+. Go back to the CRW tab
++
+image:crw-payment-service.png[]
++
+. kbd:[CMD+P] and `PaymentResource` to open that file quickly
+. Edit the file
+** Add to SUCCESS and FAILURE messages a `(CRW Build)`
+. Seed the m2 cache (select command from the right)
++
+image:crw-seed-cache.png[]
++
+. Select `Start Quarkus in Dev Mode`
++
+. Wait for compilation to finish
++
+. Set a breakpoint at the top of the "HandleCloudEvent" method
+. Go to the debug pane
+. Click on the green play button
+. Click `quarkus-development-server` on the right
+** This should open a separate tab that gives the default / page
+. Copy the URL of the tab to `CRW_ROUTE`
+. From the blue shell, run the following command
++
+----
+curl -X POST -H "Content-Type: application/json" -d @$DEMO_HOME/example/order-payload.json $CRW_ROUTE
+----
++ 
+. Go back to the CRW tab and see that it's waiting in the debugger
+
 
 ==== Scaling Support ====
 
