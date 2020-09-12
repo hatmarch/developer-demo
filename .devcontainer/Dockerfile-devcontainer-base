@@ -15,7 +15,7 @@ RUN dnf install -y subscription-manager
 # command line for this would look something like
 # DOCKER_BUILDKIT=1 docker build --progress=plain --secret id=myuser,src=../docker-secrets/myuser.txt --secret id=mypass,src=../docker-secrets/mypass.txt -f Dockerfile-devcontainer-base -t quay.io/mhildenb/dev-demo-base:1.0 .
 RUN --mount=type=secret,id=myuser --mount=type=secret,id=mypass \
-    subscription-manager register --username=$(cat /run/secrets/myuser) \
+    subscription-manager register  --username=$(cat /run/secrets/myuser) \
     --password=$(cat /run/secrets/mypass) --auto-attach
 
 RUN dnf clean all && rm -r /var/cache/dnf  && dnf upgrade -y --allowerasing --nobest --skip-broken && \
@@ -27,10 +27,51 @@ RUN dnf group install -y "Development Tools" && \
      bzip2-devel.x86_64
 
 # install skopeo, wget, and zsh
-RUN dnf install -y skopeo wget zsh jq
+RUN dnf install -y skopeo wget zsh jq iputils vi httpd-tools
 
 # install prerequisites for the graalvm
 RUN dnf install -y gcc glibc-devel zlib-devel
+
+# install stern
+RUN cd /usr/local/bin && \
+    wget https://github.com/wercker/stern/releases/download/1.11.0/stern_linux_amd64 -O /usr/local/bin/stern && \
+    chmod 755 /usr/local/bin/stern && \
+# instal knative client
+    wget -qO- https://mirror.openshift.com/pub/openshift-v4/clients/serverless/0.14.0/kn-linux-amd64-0.14.0.tar.gz | tar -zxvf - -C /usr/local/bin ./kn && chmod 755 /usr/local/bin/kn && \
+# instal hey
+    wget https://storage.googleapis.com/hey-release/hey_linux_amd64 -O /usr/local/bin/hey && \
+    chmod 755 /usr/local/bin/hey && \
+# install istioctl
+    curl -L https://github.com/istio/istio/releases/download/1.4.7/istioctl-1.4.7-linux.tar.gz | tar -zxvf - -C /usr/local/bin && chmod 755 /usr/local/bin/istioctl
+
+# install AWS cli
+RUN curl "https://d1vvhvl2y92vvt.cloudfront.net/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && ./aws/install && rm awscliv2.zip && rm -rf ./aws 
+    # && ln -s /usr/local/bin/aws2 /usr/local/bin/aws
+
+# for htpasswd support 
+# install a more modern version of tkn
+RUN curl -L https://github.com/tektoncd/cli/releases/download/v0.11.0/tkn_0.11.0_Linux_x86_64.tar.gz | \
+    tar -xvzf - -C /usr/local/bin/ tkn && chmod 755 /usr/local/bin/tkn
+
+# overwrite existing oc with the absolute newest version of the openshift client
+RUN curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz | \
+    tar -xvzf - -C /usr/bin/ oc && chmod 755 /usr/bin/oc
+
+# graalvm for native compilation
+RUN curl -L https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-20.2.0/graalvm-ce-java11-linux-amd64-20.2.0.tar.gz | \
+    tar -zxvf - -C /usr/local/ && /usr/local/graalvm-ce-java11-20.2.0/bin/gu install native-image && \
+    export GRAAL_HOME=/usr/local/graalvm-ce-java11-20.2.0 && \
+    ln -s $GRAAL_HOME/bin/native-image /usr/local/bin
+
+# Add latest helm 3.0 client
+RUN wget https://mirror.openshift.com/pub/openshift-v4/clients/helm/latest/helm-linux-amd64 -O /usr/local/bin/helm && \
+    chmod 755 /usr/local/bin/helm
+
+RUN wget https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl -O /usr/local/bin/kubectl && \
+    chmod 755 /usr/local/bin/kubectl
+
+# RUN dnf install -y procps
 
 RUN subscription-manager unregister
 
