@@ -130,7 +130,7 @@ main() {
 
     # There can be a race when the system is installing the pipeline operator in the $cicd_prj
     echo -n "Waiting for Pipelines Operator to be installed in $cicd_prj..."
-    while [[ "$(oc get $(oc get csv -oname | grep pipelines) -o jsonpath='{.status.phase}')" != "Succeeded" ]]; do
+    while [[ "$(oc get $(oc get csv -oname -n $cicd_prj| grep pipelines) -o jsonpath='{.status.phase}' -n $cicd_prj 2>/dev/null)" != "Succeeded" ]]; do
         echo -n "."
         sleep 1
     done
