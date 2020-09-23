@@ -63,7 +63,8 @@ remove-operator()
     OPERATOR_NAME=$1
 
     echo "Uninstalling operator: ${OPERATOR_NAME}"
-    CURRENT_SERVERLESS_CSV=$(oc get sub ${OPERATOR_NAME} -n openshift-operators -o yaml | grep "currentCSV: ${OPERATOR_NAME}" | sed "s/.*currentCSV: //")
+    # NOTE: there is intentionally a space before "currentCSV" in the grep since without it f.currentCSV will also be matched which is not what we want
+    CURRENT_SERVERLESS_CSV=$(oc get sub ${OPERATOR_NAME} -n openshift-operators -o yaml | grep " currentCSV:" | sed "s/.*currentCSV: //")
     oc delete sub ${OPERATOR_NAME} -n openshift-operators
     oc delete csv ${CURRENT_SERVERLESS_CSV} -n openshift-operators
 }
