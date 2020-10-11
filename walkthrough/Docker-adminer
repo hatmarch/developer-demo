@@ -1,0 +1,3 @@
+FROM quay.io/mhildenb/myadminer:1.2
+
+CMD php -S [::]:8080 -t /var/www/html
