@@ -4,38 +4,71 @@
 :toc:
 :toclevels: 4
 
+= OpenShift Developer Experience Demo =
+
+This demo is used to show many aspects that Developer's will find useful about OpenShift's take on Kubernetes.  After <<Installing Demo,setting up this demo>> you can run through link:walkthrough/demo-walkthrough.adoc[a walkthrough] that demonstrates setting up event driven serverless payment service to integrate with this "Red Hat Coolstore" website as can be seen in this image:
+
+image:coolstore-arch.png[]
+
+The walkthrough will cover topics such as:
+
+* Using an Operator to easily setup a Kafka Cluster inside OpenShift
+* Creating a knative service from the Developer Perspective
+* Connecting the Knative Service to be driven by a Kafka topic
+* Editing the Knative Service using CodeReady Workspaces
+* Triggering an existing Tekton Pipeline from within CodeReady Workspaces (to an in-cluster hosted git repo)
+* Creating a Tekton Pipeline on the fly using OpenShift pipeline UI
+
 == Installing Demo ==
 [IMPORTANT]
 ====
-* Before running any script commands, make sure the run the following in the appropriate shell.  Note that the first parameter in this command will set the `PROJECT_PREFIX` environment variable which is referenced in many of the instructions.  If not provided, the default is `demo-dev`.
-+
-----
-. scripts/shell-setup.sh 
-----
+To limit the amount of incompatibility in setting up the demo, all the commands that are listed are expected to be run in an appropriately setup container.  You will find this as part of the instructions below and it's important not to skip this step
+
+This demo also supports the link:https://code.visualstudio.com/docs/remote/containers[VS Code Remote Development (Containers)] as can be seen in the .devcontainer directory.  If you use the terminal in VSCode and run this repo in a container, then you don't need to follow the commands to run docker in the shell as your terminal will already be running in a container that has all the necessary runtime components
 ====
 
-=== Setup Prerequisites ===
-
-. Setup your environment or shell variables as outlined <<Variables Used in This Demo,here>>
-. Run the following script to install the necessary operators to your cluster
+. Fork or clone this repo onto your local machine
+. `cd` to the root of the folder
+. Run the following command:
+** NOTE: If you are not using `zsh` locally, you can omit the `-v ~/.oh-my-zsh:/home/jboss/.oh-my-zsh` part of the `docker run` command below
 +
 ----
-$DEMO_HOME/scripts/install-prereq.sh
+docker run -it -v ~/.kube:/home/jboss/.kube -v ~/.oh-my-zsh:/home/jboss/.oh-my-zsh -v $(pwd):/workspaces/developer-demo quay.io/mhildenb/dev-demo-shell /bin/zsh
 ----
-
-=== Main Demo Installation ===
-
-The demo installation will setup all the necessary aspects of the demo which includes:
-
-* Gogs repo
-* Tekton Pipeline
-* Coolstore Elements (no Payment)
-* Optional: Kafka
-
-. Install the main part of the demo by running this command
++
+. Then run the following commands (and all following commands) inside the running container
 +
 ----
-$DEMO_HOME/scripts/create-demo.sh -p $PROJECT_PREFIX 
+cd /workspaces/developer-demo
+. scripts/shell-setup.sh
+----
++
+. OPTIONALLY set `PROJECT_PREFIX` to the name prefix name you'd like the projects associated with this demo to have (default:`dev-demo`)
+. Run the following command to setup the demo:
+** `-i` flag sets up all pre-requisites
+** `-p` is not necessary if you don't want to change the default `PROJECT_PREFIX`
++
+----
+$DEMO_HOME/scripts/create-demo.sh -p $PROJECT_PREFIX -i
+----
++
+. If the installation was successful, you should see the following:
++
+----
+Demo installation completed without error.
+----
++
+. Once completed, you can now follow the instructions link:walkthrough/demo-walkthrough.adoc[in this walkthrough]
+
+== Uninstalling the Demo ==
+
+You can remove the aspects from this demo from your cluster by running the following command (from within the container that was setup above)
+
+* The `-p` flag is not necessary if you haven't changed the `PROJECT_PREFIX` from the default
+* [red]#The `-f` flag will remove all the operators (and associated CRDs) that were installed to support the demo.  This could be an issue if you have other things in the cluster using these resources (e.g. Serverless).  If you only want the projects associated with the demo to be removed and not all the prerequisite operators, omit the `-f` flag#
+
+----
+$DEMO_HOME/scripts/uninstall.sh -f -p $PROJECT_PREFIX
 ----
 
 == Appendix ==

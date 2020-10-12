@@ -181,6 +181,8 @@ main() {
     echo "updating all images"
     # Fix up all image streams by pointing to pre-built images (which should trigger deployments)
     $DEMO_HOME/scripts/image-stream-setup.sh
+
+    echo "Demo installation completed without error."
 }
 
 main "$@"
