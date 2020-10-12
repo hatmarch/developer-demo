@@ -25,12 +25,13 @@ oc apply -n $TARGET_PROJECT -f $DEMO_HOME/install/crw/crw-subscription.yaml
 # Wait for checluster to be a thing
 echo "Waiting for CheCluster CRDs"
 while [ true ] ; do
-  if [ "$(oc explain checluster)" ] ; then
+  if [ -n "$(oc explain checluster 2>/dev/null)" ] ; then
     break
   fi
   echo -n .
-  sleep 10
+  sleep 3
 done
+echo "done."
 
 echo "Creating the CodeReady Workspace"
 cat <<EOF | oc apply -n $TARGET_PROJECT -f -
