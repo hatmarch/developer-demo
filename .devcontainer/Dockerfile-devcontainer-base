@@ -51,7 +51,7 @@ RUN curl "https://d1vvhvl2y92vvt.cloudfront.net/awscli-exe-linux-x86_64.zip" -o 
 
 # for htpasswd support 
 # install a more modern version of tkn
-RUN curl -L https://github.com/tektoncd/cli/releases/download/v0.11.0/tkn_0.11.0_Linux_x86_64.tar.gz | \
+RUN curl -L https://github.com/tektoncd/cli/releases/download/v0.12.1/tkn_0.12.1_Linux_x86_64.tar.gz | \
     tar -xvzf - -C /usr/local/bin/ tkn && chmod 755 /usr/local/bin/tkn
 
 # overwrite existing oc with the absolute newest version of the openshift client
