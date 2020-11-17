@@ -21,12 +21,12 @@
 	"extensions": [
 		"vscjava.vscode-java-pack",
 		"redhat.vscode-xml",
-		"joaompinto.asciidoctor-vscode",
 		"redhat.vscode-quarkus",
 		"ggrebert.quarkus-snippets",
 		"humao.rest-client",
 		"redhat.vscode-knative",
-		"redhat.vscode-tekton-pipelines"
+		"redhat.vscode-tekton-pipelines",
+		"asciidoctor.asciidoctor-vscode"
 	],
 	"settings":{
 		"java.home": "/usr/lib/jvm/java-11-openjdk",
