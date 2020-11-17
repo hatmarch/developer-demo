@@ -74,7 +74,7 @@ echo "Hostname suffix is ${HOSTNAME_SUFFIX}"
 # Wait for che to be up by calling external URL of readiness check
 echo "Waiting for Che to come up (at http://codeready-${TARGET_PROJECT}.${HOSTNAME_SUFFIX}/api/system/state/)..."
 while [ 1 ]; do
-  STAT=$(curl -L -s -w '%{http_code}' -o /dev/null http://codeready-${TARGET_PROJECT}.${HOSTNAME_SUFFIX}/api/system/state/)
+  STAT=$(curl -k -L -s -w '%{http_code}' -o /dev/null http://codeready-${TARGET_PROJECT}.${HOSTNAME_SUFFIX}/api/system/state/)
   if [ "$STAT" = 200 ] ; then
     break
   fi
