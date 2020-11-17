@@ -37,9 +37,9 @@ RUN cd /usr/local/bin && \
     wget https://github.com/wercker/stern/releases/download/1.11.0/stern_linux_amd64 -O /usr/local/bin/stern && \
     chmod 755 /usr/local/bin/stern && \
 # instal knative client
-    wget -qO- https://mirror.openshift.com/pub/openshift-v4/clients/serverless/0.14.0/kn-linux-amd64-0.14.0.tar.gz | tar -zxvf - -C /usr/local/bin ./kn && chmod 755 /usr/local/bin/kn && \
-# instal hey
-    wget https://storage.googleapis.com/hey-release/hey_linux_amd64 -O /usr/local/bin/hey && \
+    wget -qO- https://mirror.openshift.com/pub/openshift-v4/clients/serverless/0.16.1/kn-linux-amd64-0.16.1.tar.gz | tar -zxvf - -C /usr/local/bin ./kn && chmod 755 /usr/local/bin/kn && \
+# install hey
+    wget https://mwh-demo-assets.s3-ap-southeast-2.amazonaws.com/hey_linux_amd64 -O /usr/local/bin/hey && \
     chmod 755 /usr/local/bin/hey && \
 # install istioctl
     curl -L https://github.com/istio/istio/releases/download/1.4.7/istioctl-1.4.7-linux.tar.gz | tar -zxvf - -C /usr/local/bin && chmod 755 /usr/local/bin/istioctl
@@ -49,14 +49,13 @@ RUN curl "https://d1vvhvl2y92vvt.cloudfront.net/awscli-exe-linux-x86_64.zip" -o 
     unzip awscliv2.zip && ./aws/install && rm awscliv2.zip && rm -rf ./aws 
     # && ln -s /usr/local/bin/aws2 /usr/local/bin/aws
 
-# for htpasswd support 
 # install a more modern version of tkn
-RUN curl -L https://github.com/tektoncd/cli/releases/download/v0.12.1/tkn_0.12.1_Linux_x86_64.tar.gz | \
+RUN curl -L https://github.com/tektoncd/cli/releases/download/v0.13.1/tkn_0.13.1_Linux_x86_64.tar.gz | \
     tar -xvzf - -C /usr/local/bin/ tkn && chmod 755 /usr/local/bin/tkn
 
 # overwrite existing oc with the absolute newest version of the openshift client
 RUN curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz | \
-    tar -xvzf - -C /usr/bin/ oc && chmod 755 /usr/bin/oc
+    tar -xvzf - -C /usr/local/bin/ oc && chmod 755 /usr/local/bin/oc && ln -s /usr/local/bin/oc /usr/local/bin/kubectl
 
 # graalvm for native compilation
 RUN curl -L https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-20.2.0/graalvm-ce-java11-linux-amd64-20.2.0.tar.gz | \
@@ -67,9 +66,6 @@ RUN curl -L https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-20
 # Add latest helm 3.0 client
 RUN wget https://mirror.openshift.com/pub/openshift-v4/clients/helm/latest/helm-linux-amd64 -O /usr/local/bin/helm && \
     chmod 755 /usr/local/bin/helm
-
-RUN wget https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl -O /usr/local/bin/kubectl && \
-    chmod 755 /usr/local/bin/kubectl
 
 # RUN dnf install -y procps
 
