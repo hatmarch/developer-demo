@@ -123,7 +123,7 @@ main() {
 
         remove-crds "kafka.strimzi.io" || true
 
-        remove-operator "openshift-pipelines-operator" || true
+        remove-operator "openshift-pipelines-operator-rh" || true
 
         remove-operator "codeready-workspaces" || true
 
