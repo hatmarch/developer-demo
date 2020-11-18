@@ -30,6 +30,11 @@ image:scaling-desktop-setup.png[]
 docker run -it -v ~/.kube:/home/jboss/.kube -v ~/.oh-my-zsh:/home/jboss/.oh-my-zsh -v $(pwd):/workspaces/developer-demo quay.io/mhildenb/dev-demo-shell /bin/zsh
 ----
 
+=== Dealing with Self-Signed Certificates
+
+[red]#If your cluster uses self-signed certificates that will not be recognized if your demo client's trust store you will need to trust the root certificate of your cluster for certain aspects of the demo to work (particularly the <<Inner Loop: Intro to CodeReady Workspaces,Code Ready Workspaces section>>).
+
+See <<Dealing with Self-signed Certificates,here>> for instructions on how to do this prior to running the demo.
 
 == Coolstore Introduction
 
@@ -227,6 +232,15 @@ image:crw-badge.png[]
 . In the meantime, in a new tab, navigate to the url in the annotation uri and show the devfile
 ** scroll through the devfile to explain at a high level the contents
 +
+[WARNING]
+====
+If you are using a cluster with self-signed certificates you may get the following error when trying to access the CodeReady Workspace dashboard.
+
+image::crw-cert-error.png[error,200,200]
+
+If this happens, you can fix this issue by following the steps <<Dealing with Self-signed Certificates,here>>.
+====
++
 . Log into CodeReady Workspaces
 ** includes giving name and email
 . You will now be presented the building screen.  This will take a few minutes
@@ -322,6 +336,25 @@ curl -X POST -H "Content-Type: application/json" -d @$DEMO_HOME/example/order-pa
 
 
 == Troubleshooting ==
+
+=== Dealing with Self-signed Certificates
+
+Clusters with self-signed certificates may pose a problem to certain demo clients/browsers, particularly with CodeReady Workspaces.  To address this you will need to add the self-signed root certificate to the demo client's trust store.  You can do this in the following way on Google Chrome for Mac (other browsers/OSes may vary):
+
+. Navigate to any secured page on the cluster UI if you haven't already
+. View the certificate details
++
+image:cert-details.png[]
++
+. Drag the icon next to the certificate details to the desktop (or somewhere on the local filesystem).  See `1` in <<local-store-cert>>
+. Double-click on the downloaded certificate to open the `Keychain Access` app.  See `2` in <<local-store-cert>>
+. Click on the cert in the list to open its details.  See `3` in <<local-store-cert>>
+. On the cert details, expand the `Trust` dropdown and select `Always Trust` for "When using this certificate".  See `4` in <<local-store-cert>>
+** NOTE: Enter administrator password as prompted
+
+[[local-store-cert]]
+.Steps to add self-signed certificate to local trust store
+image::add-to-trust-store-steps.png[]
 
 === Event Source:
 
@@ -574,7 +607,7 @@ image:crw-seed-cache.png[]
 . From the blue shell, run the following command
 +
 ----
-curl -X POST -H "Content-Type: application/json" -d @$DEMO_HOME/example/order-payload.json $CRW_ROUTE
+curl -k -v -X POST -H "Content-Type: application/json" -d @$DEMO_HOME/example/order-payload.json $CRW_ROUTE
 ----
 + 
 . Go back to the CRW tab and see that it's waiting in the debugger
