@@ -36,14 +36,7 @@ This demo also supports the link:https://code.visualstudio.com/docs/remote/conta
 docker run -it -v ~/.kube:/home/jboss/.kube -v ~/.oh-my-zsh:/home/jboss/.oh-my-zsh -v $(pwd):/workspaces/developer-demo quay.io/mhildenb/dev-demo-shell /bin/zsh
 ----
 +
-. Then run the following commands (and all following commands) inside the running container
-+
-----
-cd /workspaces/developer-demo
-. scripts/shell-setup.sh
-----
-+
-. OPTIONALLY set `PROJECT_PREFIX` to the name prefix name you'd like the projects associated with this demo to have (default:`dev-demo`)
+. OPTIONALLY override `PROJECT_PREFIX` to the name prefix name you'd like the projects associated with this demo to have (default:`dev-demo`)
 . Run the following command to setup the demo:
 ** `-i` flag sets up all pre-requisites
 ** `-p` is not necessary if you don't want to change the default `PROJECT_PREFIX`
