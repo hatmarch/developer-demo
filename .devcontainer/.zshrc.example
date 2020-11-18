@@ -99,4 +99,4 @@ source $ZSH/oh-my-zsh.sh
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 #
 
-source scripts/shell-setup.sh
+source $DEMO_HOME/scripts/shell-setup.sh

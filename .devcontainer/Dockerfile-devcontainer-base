@@ -75,5 +75,6 @@ USER jboss
 
 # install and configure ohmyzsh for jboss user
 RUN wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - | zsh
-COPY .zshrc.example ~/.zshrc
+COPY .zshrc.example $HOME/.zshrc
 
+ENV DEMO_HOME /workspaces/developer-demo
