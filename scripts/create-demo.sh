@@ -152,7 +152,7 @@ main() {
     # Seeding the .m2 cache
     echo "Seeding the .m2 cache"
     oc apply -n $cicd_prj -f $DEMO_HOME/install/tekton/init/copy-to-workspace-task.yaml 
-    oc create -n $cicd_prj -f install/tekton/init/seed-cache-task-run.yaml
+    oc create -n $cicd_prj -f $DEMO_HOME/install/tekton/init/seed-cache-task-run.yaml
     # This should cause everything to block and show output
     tkn tr logs -L -f -n $cicd_prj 
 
