@@ -36,8 +36,8 @@ RUN dnf install -y gcc glibc-devel zlib-devel
 RUN cd /usr/local/bin && \
     wget https://github.com/wercker/stern/releases/download/1.11.0/stern_linux_amd64 -O /usr/local/bin/stern && \
     chmod 755 /usr/local/bin/stern && \
-# instal knative client
-    wget -qO- https://mirror.openshift.com/pub/openshift-v4/clients/serverless/0.16.1/kn-linux-amd64-0.16.1.tar.gz | tar -zxvf - -C /usr/local/bin ./kn && chmod 755 /usr/local/bin/kn && \
+# install knative client
+    wget -qO- https://mirror.openshift.com/pub/openshift-v4/clients/serverless/0.17.3/kn-linux-amd64-0.17.3.tar.gz | tar -zxvf - -C /usr/local/bin ./kn && chmod 755 /usr/local/bin/kn && \
 # install hey
     wget https://mwh-demo-assets.s3-ap-southeast-2.amazonaws.com/hey_linux_amd64 -O /usr/local/bin/hey && \
     chmod 755 /usr/local/bin/hey && \
