@@ -108,6 +108,9 @@ main() {
         fi
     fi
 
+    echo "Installing CodeReady Workspaces"
+    ${SCRIPT_DIR}/install-crw.sh codeready
+
     # 
     # Install Tekton resources
     #

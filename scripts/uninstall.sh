@@ -134,7 +134,11 @@ main() {
         remove-operator "serverless-operator" || true
     fi
 
-    oc delete project codeready || true
+    # delete the checluster before deleting the codeready project
+    oc delete checluster --all -n codeready
+
+    # delete the codeready project as well as any projects created for a given user
+    oc get project -o name | grep codeready | xargs oc delete || true
 
     # stage_prj="${PROJECT_PREFIX}-stage"
     # echo "Deleting project $stage_prj"

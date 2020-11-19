@@ -145,9 +145,6 @@ main()
     # needs to properly reference the cluster that we'll be using
     sed "s#support-prj#${sup_prj}#" $DEMO_HOME/install/kafka-eventing/kafka-eventing.yaml | oc apply -f -
 
-    echo "Installing CodeReady Workspaces"
-    ${SCRIPT_DIR}/install-crw.sh codeready
-
     # Ensure pipelines is installed
     wait_for_crd "crd/pipelines.tekton.dev"
 
