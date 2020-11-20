@@ -27,7 +27,7 @@ image:scaling-desktop-setup.png[]
 .. Run the following docker command
 +
 ----
-docker run -it -v ~/.kube:/home/jboss/.kube -v ~/.oh-my-zsh:/home/jboss/.oh-my-zsh -v $(pwd):/workspaces/developer-demo quay.io/mhildenb/dev-demo-shell /bin/zsh
+docker run -it -v ~/.kube:/home/jboss/.kube -v ~/.oh-my-zsh:/home/jboss/.oh-my-zsh -v $(pwd):/workspaces/developer-demo -w /workspaces/developer-demo quay.io/mhildenb/dev-demo-shell /bin/zsh
 ----
 
 === Dealing with Self-Signed Certificates
