@@ -1,4 +1,4 @@
-FROM quay.io/mhildenb/dev-demo-base:1.1
+FROM quay.io/mhildenb/dev-demo-base:latest
 
 USER root
 
