@@ -1,0 +1,9 @@
+# Delete this file and recreate it to kick off new instances of the build
+# See build progress with tkn tr logs -L -f
+apiVersion: build.dev/v1alpha1
+kind: BuildRun
+metadata:
+  name: buildpack-payment-build-run
+spec:
+  buildRef:
+    name: buildpack-payment-build

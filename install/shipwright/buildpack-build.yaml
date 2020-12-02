@@ -1,0 +1,18 @@
+---
+apiVersion: build.dev/v1alpha1
+kind: Build
+metadata:
+  name: buildpack-payment-build
+  annotations:
+    build.build.dev/build-run-deletion: "false"
+spec:
+  source:
+    url: http://gogs.dev-demo-cicd.svc.cluster.local:3000/gogs/coolstore.git
+    # url: https://gogs-dev-demo-cicd.apps.cluster-e910.e910.example.opentlc.com/gogs/coolstore
+    contextDir: /payment-service
+  strategy:
+    name: buildpacks-v3
+    kind: ClusterBuildStrategy
+  output:
+    image: default-route-openshift-image-registry.apps.cluster-e910.e910.example.opentlc.com/dev-demo-dev/shipwright-test
+    # image: image-registry.openshift-image-registry.svc:5000/dev-demo-dev/shipwright-test
