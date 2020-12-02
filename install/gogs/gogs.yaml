@@ -165,16 +165,22 @@ spec:
     name: gogs
   type: ClusterIP
 ---
+apiVersion: route.openshift.io/v1
 kind: Route
-apiVersion: v1
-id: gogs-http
 metadata:
   labels:
     app: gogs
   name: gogs
 spec:
+  port:
+    targetPort: 3000-tcp
+  tls:
+    termination: edge
   to:
+    kind: Service
     name: gogs
+    weight: 100
+  wildcardPolicy: None
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1
