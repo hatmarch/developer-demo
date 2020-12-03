@@ -14,5 +14,7 @@ spec:
     name: buildpacks-v3
     kind: ClusterBuildStrategy
   output:
-    image: default-route-openshift-image-registry.apps.cluster-e910.e910.example.opentlc.com/dev-demo-dev/shipwright-test
+    image: default-route-openshift-image-registry.apps.cluster-e910.e910.example.opentlc.com/dev-demo-dev/shipwright-test:latest
     # image: image-registry.openshift-image-registry.svc:5000/dev-demo-dev/shipwright-test
+    # credentials:
+    #   name: default-dockercfg-rpmvw
