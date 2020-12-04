@@ -32,15 +32,15 @@ docker run -it -v ~/.kube:/home/jboss/.kube -v ~/.oh-my-zsh:/home/jboss/.oh-my-z
 
 === Dealing with Self-Signed Certificates
 
-[red]#If your cluster uses self-signed certificates that will not be recognized if your demo client's trust store you will need to trust the root certificate of your cluster for certain aspects of the demo to work (particularly the <<Inner Loop: Intro to CodeReady Workspaces,Code Ready Workspaces section>>).
+[red]#If your cluster uses self-signed certificates that will not be recognized if your demo client's trust store you will need to trust the root certificate of your cluster for certain aspects of the demo to work (particularly the <<Inner Loop: Intro to CodeReady Workspaces,Code Ready Workspaces section>>).#
 
-See <<Dealing with Self-signed Certificates,here>> for instructions on how to do this prior to running the demo.
+[red]#See <<Dealing with Self-signed Certificates,here>> for instructions on how to do this prior to running the demo.#
 
 == Coolstore Introduction
 
 [NOTE]
 ****
-NOTE: [red]#Hide any "share screen" notification before running through the demo#
+[red]#Hide any "share screen" notification before running through the demo#
 ****
 
 . Start with `$PROJECT_PREFIX`-dev project, which should have the Red Hat Coolstore setup minus the payment service
@@ -139,8 +139,35 @@ image:payment-env.png[]
 +
 *** Label: `app.kubernetes.io/part-of=focus`
 +
-
-_OPTIONAL_: Show that the payment service can now be invoked via URL
++
+. _OPTIONAL_: Show that the payment service can now be invoked via URL
+.. Show the Knative service in the topology view
+.. Find the Route at the bottom
+.. Copy that route
+.. In the shell, set the value of `KN_ROUTE`
++
+----
+KN_ROUTE=<route pasted from topology view>
+----
++
+.. [blue]#Alternatively, you can set the route programmatically like this (assuming you named the service `payment`)#:
++
+----
+KN_ROUTE=$(kn service describe payment -o jsonpath='{.status.url}')
+----
++
+.. Simulate an order cloud event by using `curl`:
++
+----
+curl -X POST -H "Content-Type: application/json" -d @$DEMO_HOME/example/order-payload.json $KN_ROUTE
+----
++
+. Next explain that if we did this via S2I or a git repo, OpenShift would have setup a badge for us to be able to open code in this repo in CRW.  Let's give it a little hint by adding an annotation on the route:
++
+----
+kn service update payment --annotation "app.openshift.io/vcs-ref=master" --annotation "app.openshift.io/vcs-uri=https://github.com/hatmarch/coolstore.git" --revision-name "{{.Service}}-{{.Generation}}" -n dev-demo-dev
+----
+. Click on the badge when it appears to start CRW workspace building.  We'll come back to explain DevFiles in a bit
 
 == Knative Eventing: Create Event Source ==
 
@@ -218,7 +245,7 @@ We actually have this service setup on a local git repo.  This git repo triggers
 . First, go to the codeready project and show the installed operator
 ** could make up a conceit that this is from CRW
 . Then navigate back to the Developer Perspective and center in on the payment service
-. Run the following command in the shell
+. Run the following command in the shell (if you haven't done so already)
 ** NOTE: The uri is referencing an https endpoint as that is the only way CRW recognizes devfiles
 ----
 kn service update payment --annotation "app.openshift.io/vcs-ref=master" --annotation "app.openshift.io/vcs-uri=https://github.com/hatmarch/coolstore.git" --revision-name "{{.Service}}-{{.Generation}}" -n dev-demo-dev
