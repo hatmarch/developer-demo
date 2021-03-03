@@ -18,31 +18,35 @@ RUN --mount=type=secret,id=myuser --mount=type=secret,id=mypass \
     subscription-manager register  --username=$(cat /run/secrets/myuser) \
     --password=$(cat /run/secrets/mypass) --auto-attach
 
-RUN dnf clean all && rm -r /var/cache/dnf  && dnf upgrade -y --allowerasing --nobest --skip-broken && \
+RUN subscription-manager refresh && \
+    dnf clean all && rm -r /var/cache/dnf  && dnf upgrade -y --allowerasing --nobest --skip-broken && \
     dnf update -y --allowerasing --nobest --skip-broken
 
 # prerequisites for the eb command line
-RUN dnf group install -y "Development Tools" && \
-     dnf install -y zlib-devel openssl-devel ncurses-devel libffi-devel sqlite-devel.x86_64 readline-devel.x86_64 \
-     bzip2-devel.x86_64
+#RUN dnf group install -y "Development Tools" && \
+#     dnf install -y zlib-devel openssl-devel ncurses-devel libffi-devel sqlite-devel.x86_64 readline-devel.x86_64 \
+#     bzip2-devel.x86_64
 
-# install skopeo, wget, and zsh
-RUN dnf install -y skopeo wget zsh jq iputils vi httpd-tools
+# install a smattering of useful packages (some of which are used later in dockerfile such as wget, zsh, and git)
+RUN dnf install -y skopeo wget zsh jq iputils vi httpd-tools procps git \
 
-# install prerequisites for the graalvm
-RUN dnf install -y gcc glibc-devel zlib-devel
+# install prerequisites for the graalvm (see also: https://github.com/quarkusio/quarkus-images/blob/master/modules/common-packages/module.yaml)
+    gcc glibc-devel zlib-devel gcc-c++ && \
+
+# and clean up before committing this layer
+    dnf clean all && rm -r /var/cache/dnf
 
 # install stern
 RUN cd /usr/local/bin && \
     wget https://github.com/wercker/stern/releases/download/1.11.0/stern_linux_amd64 -O /usr/local/bin/stern && \
     chmod 755 /usr/local/bin/stern && \
-# install knative client
-    wget -qO- https://mirror.openshift.com/pub/openshift-v4/clients/serverless/0.17.3/kn-linux-amd64-0.17.3.tar.gz | tar -zxvf - -C /usr/local/bin ./kn && chmod 755 /usr/local/bin/kn && \
 # install hey
     wget https://mwh-demo-assets.s3-ap-southeast-2.amazonaws.com/hey_linux_amd64 -O /usr/local/bin/hey && \
     chmod 755 /usr/local/bin/hey && \
 # install istioctl
-    curl -L https://github.com/istio/istio/releases/download/1.4.7/istioctl-1.4.7-linux.tar.gz | tar -zxvf - -C /usr/local/bin && chmod 755 /usr/local/bin/istioctl
+    curl -L https://github.com/istio/istio/releases/download/1.4.7/istioctl-1.4.7-linux.tar.gz | tar -zxvf - -C /usr/local/bin && chmod 755 /usr/local/bin/istioctl && \
+# install knative
+    wget -qO- https://mirror.openshift.com/pub/openshift-v4/clients/serverless/0.19.1/kn-linux-amd64-0.19.1.tar.gz | tar -zxvf - -C /usr/local/bin ./kn && chmod 755 /usr/local/bin/kn
 
 # install AWS cli
 RUN curl "https://d1vvhvl2y92vvt.cloudfront.net/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
@@ -50,24 +54,22 @@ RUN curl "https://d1vvhvl2y92vvt.cloudfront.net/awscli-exe-linux-x86_64.zip" -o 
     # && ln -s /usr/local/bin/aws2 /usr/local/bin/aws
 
 # install a more modern version of tkn
-RUN curl -L https://github.com/tektoncd/cli/releases/download/v0.13.1/tkn_0.13.1_Linux_x86_64.tar.gz | \
-    tar -xvzf - -C /usr/local/bin/ tkn && chmod 755 /usr/local/bin/tkn
+RUN curl -L https://mirror.openshift.com/pub/openshift-v4/clients/pipeline/0.15.0/tkn-linux-amd64-0.15.0.tar.gz | \
+    tar -xvzf - -C /usr/local/bin/ ./tkn && chmod 755 /usr/local/bin/tkn
 
 # overwrite existing oc with the absolute newest version of the openshift client
 RUN curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz | \
     tar -xvzf - -C /usr/local/bin/ oc && chmod 755 /usr/local/bin/oc && ln -s /usr/local/bin/oc /usr/local/bin/kubectl
 
 # graalvm for native compilation
-RUN curl -L https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-20.2.0/graalvm-ce-java11-linux-amd64-20.2.0.tar.gz | \
-    tar -zxvf - -C /usr/local/ && /usr/local/graalvm-ce-java11-20.2.0/bin/gu install native-image && \
-    export GRAAL_HOME=/usr/local/graalvm-ce-java11-20.2.0 && \
+RUN curl -L https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-21.0.0.2/graalvm-ce-java11-linux-amd64-21.0.0.2.tar.gz | \
+    tar -zxvf - -C /usr/local/ && /usr/local/graalvm-ce-java11-21.0.0.2/bin/gu install native-image && \
+    export GRAAL_HOME=/usr/local/graalvm-ce-java11-21.0.0.2 && \
     ln -s $GRAAL_HOME/bin/native-image /usr/local/bin
 
 # Add latest helm 3.0 client
 RUN wget https://mirror.openshift.com/pub/openshift-v4/clients/helm/latest/helm-linux-amd64 -O /usr/local/bin/helm && \
     chmod 755 /usr/local/bin/helm
-
-# RUN dnf install -y procps
 
 RUN subscription-manager unregister
 
