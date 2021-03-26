@@ -1,8 +1,11 @@
-apiVersion: eventing.knative.dev/v1alpha1
-kind: KnativeEventingKafka
+apiVersion: operator.serverless.openshift.io/v1alpha1
+kind: KnativeKafka
 metadata:
-  name: knative-eventing-kafka
   namespace: knative-eventing
+  name: knative-kafka
 spec:
-  bootstrapServers: 'my-cluster-kafka-bootstrap.support-prj:9092'
-  setAsDefaultChannelProvisioner: true
+  channel:
+    bootstrapServers: 'my-cluster-kafka-bootstrap.support-prj:9092'
+    enabled: true
+  source:
+    enabled: true
